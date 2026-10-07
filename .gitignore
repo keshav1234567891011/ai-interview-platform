@@ -1,0 +1,41 @@
+# Secrets: examples must contain placeholders only.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Dependencies, build output, and repository-local tool caches.
+node_modules/
+.next/
+out/
+dist/
+build/
+.local/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+pytest-cache-files-*/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage/
+htmlcov/
+*.tsbuildinfo
+*.log
+
+# Editor and operating system temporary files.
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local verification artifacts.
+frontend/test-results/
+frontend/playwright-report/
