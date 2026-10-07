@@ -1,0 +1,170 @@
+import { test, expect } from "@playwright/test";
+import { randomBytes, randomUUID } from "node:crypto";
+import { spawnSync } from "node:child_process";
+import path from "node:path";
+import development from "../../config/development.json";
+
+const root = path.resolve(__dirname, "../..");
+
+test("real browser account, profile, logout, and curated interview persist in PostgreSQL", async ({ page, context }) => {
+  const email = `interviewai-validation-${randomUUID().replaceAll("-", "")}@example.com`;
+  const password = `${randomBytes(36).toString("base64url")}A9`;
+  let userId: string | undefined;
+  let stage = "health and docs";
+  function database(action: string, extra: Record<string, unknown> = {}) {
+    const result = spawnSync(
+      path.join(root, "backend", ".venv", process.platform === "win32" ? "Scripts/python.exe" : "bin/python"),
+      [path.join(root, "scripts", "validation_database.py")],
+      {
+        cwd: path.join(root, "backend"),
+        input: JSON.stringify({ action, email, user_id: userId, ...extra }),
+        encoding: "utf8",
+        timeout: 20_000,
+        windowsHide: true,
+      },
+    );
+    if (result.status !== 0 || !result.stdout.includes('"passed": true')) {
+      throw new Error(`Temporary-account database ${action} check failed; private details suppressed.`);
+    }
+  }
+  function passed() { console.log(`Live browser ${stage}: passed.`); }
+  async function login() {
+    await page.goto("/login");
+    await page.getByLabel("Email address").fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    const response = page.waitForResponse(r => r.url().endsWith("/api/auth/login") && r.request().method() === "POST");
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    expect((await response).status()).toBe(200);
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page.locator(".workspace-heading h1")).toBeVisible();
+  }
+  try {
+    const backend = `http://${development.backend.host}:${development.backend.port}`;
+    const health = await page.request.get(`${backend}/health`);
+    expect(health.status()).toBe(200);
+    expect(await health.json()).toEqual({ status: "ok" });
+    expect((await page.request.get(`${backend}/docs`)).status()).toBe(200);
+    passed();
+    stage = "landing and API proxy";
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: /Practice Smarter/ })).toBeVisible();
+    expect((await page.request.get("/api/auth/me")).status()).toBe(401);
+    passed();
+    stage = "registration";
+    await page.goto("/register");
+    await page.getByLabel("Display name").fill("InterviewAI validation");
+    await page.getByLabel("Email address").fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(password);
+    const registered = page.waitForResponse(r => r.url().endsWith("/api/auth/register") && r.request().method() === "POST");
+    await page.getByRole("button", { name: "Create account", exact: true }).click();
+    const registration = await registered;
+    expect(registration.status()).toBe(201);
+    userId = (await registration.json()).id;
+    await expect(page).toHaveURL(/\/dashboard$/);
+    passed();
+    stage = "authenticated session and dashboard";
+    const me = await page.request.get("/api/auth/me");
+    expect(me.status()).toBe(200);
+    expect((await me.json()).id).toBe(userId);
+    const cookies = await context.cookies();
+    expect(cookies.some(cookie => cookie.name === "interviewai_session" && cookie.httpOnly && cookie.sameSite === "Lax")).toBe(true);
+    await expect(page.getByRole("heading", { name: "No interviews yet." })).toBeVisible();
+    passed();
+    stage = "first logout";
+    await page.getByRole("button", { name: "Logout", exact: true }).click();
+    await expect.poll(() => new URL(page.url()).pathname).toMatch(/^\/(login)?$/);
+    expect((await page.request.get("/api/auth/me")).status()).toBe(401);
+    passed();
+    stage = "login";
+    await login();
+    passed();
+    stage = "profile save and PostgreSQL persistence";
+    await page.goto("/profile");
+    await page.getByLabel("Display name").fill("InterviewAI validation updated");
+    await page.getByLabel("Target role").fill("Backend Developer");
+    await page.getByLabel("Experience level").selectOption("entry");
+    await page.getByLabel("Professional summary").fill("Temporary browser validation of local persistence.");
+    await page.getByRole("checkbox", { name: "Python", exact: true }).check();
+    await page.getByRole("checkbox", { name: "PostgreSQL", exact: true }).check();
+    await page.getByRole("button", { name: "Save profile", exact: true }).click();
+    await expect(page.getByText("Your profile is saved.")).toBeVisible();
+    await page.reload();
+    await expect(page.getByLabel("Target role")).toHaveValue("Backend Developer");
+    await expect(page.getByRole("checkbox", { name: "Python", exact: true })).toBeChecked();
+    database("profile");
+    passed();
+    stage = "logout removes protected access";
+    await page.getByRole("button", { name: "Logout", exact: true }).click();
+    await expect.poll(() => new URL(page.url()).pathname).toMatch(/^\/(login)?$/);
+    expect((await page.request.get("/api/auth/me")).status()).toBe(401);
+    await page.goto("/dashboard");
+    await expect(page).toHaveURL(/\/login\?next=/);
+    passed();
+    stage = "login again and resume workspace";
+    await login();
+    await page.goto("/resume");
+    await expect(page.getByRole("heading", { name: "Give your preparation a starting point." })).toBeVisible();
+    passed();
+    stage = "job analysis workspace";
+    await page.goto("/jobs/analyze");
+    await expect(page.getByRole("heading", { name: "Find your next focus." })).toBeVisible();
+    passed();
+    stage = "interview setup";
+    await page.goto("/interviews/new");
+    await page.getByLabel("Target role").selectOption("Backend Developer");
+    await page.getByLabel("Difficulty", { exact: true }).selectOption("Beginner");
+    await page.getByLabel("Questions", { exact: true }).selectOption("3");
+    await expect(page.getByRole("checkbox", { name: "Use AI-assisted questions" })).not.toBeChecked();
+    passed();
+    stage = "deterministic interview creation";
+    const created = page.waitForResponse(r => r.url().endsWith("/api/interviews") && r.request().method() === "POST");
+    await page.getByRole("button", { name: "Create interview", exact: true }).click();
+    const creation = await created;
+    expect(creation.status()).toBe(201);
+    const interview = await creation.json();
+    expect(interview.ai_enabled).toBe(false);
+    passed();
+    stage = "begin interview";
+    await page.getByRole("button", { name: "Begin interview", exact: true }).click();
+    await expect(page.getByLabel("Your answer", { exact: true })).toBeVisible();
+    passed();
+    stage = "answer and session recovery";
+    const answer = "I inspect the execution plan, measure query latency, and evaluate selective indexes while accounting for their storage and write overhead.";
+    await page.getByLabel("Your answer", { exact: true }).fill(answer);
+    await page.getByRole("button", { name: "Save draft", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("Draft saved");
+    await page.reload();
+    await expect(page.getByLabel("Your answer", { exact: true })).toHaveValue(answer);
+    const submitted = page.waitForResponse(r => r.url().endsWith("/answer") && r.request().method() === "PUT");
+    await page.getByRole("button", { name: "Save & next", exact: true }).click();
+    const submission = await submitted;
+    expect(submission.status()).toBe(200);
+    expect((await submission.json()).answered_count).toBe(1);
+    await page.reload();
+    await expect(page.getByRole("progressbar", { name: "Questions answered" })).toHaveAttribute("aria-valuenow", "1");
+    await expect(page.getByLabel("Your answer", { exact: true })).toHaveValue("");
+    database("interview", { interview_id: interview.id, answer });
+    passed();
+    stage = "final logout";
+    await page.getByRole("button", { name: "Logout", exact: true }).click();
+    await expect.poll(() => new URL(page.url()).pathname).toMatch(/^\/(login)?$/);
+    expect((await page.request.get("/api/auth/me")).status()).toBe(401);
+    passed();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    console.log("Private-safe browser failure categories:", {
+      assertion: message.includes("expect("),
+      strictLocator: message.includes("strict mode violation"),
+      locatorTimeout: message.includes("Timeout"),
+      checkedAssertion: message.includes("toBeChecked"),
+      visibleAssertion: message.includes("toBeVisible"),
+      clickFailure: message.includes("locator.click"),
+      selectFailure: message.includes("selectOption"),
+      unexpectedStatus: message.includes("toBe("),
+    });
+    throw new Error(`Live browser validation failed during ${stage}; private error details suppressed.`);
+  } finally {
+    database("cleanup");
+    console.log("Temporary validation account and dependent records removed; existing users untouched.");
+  }
+});

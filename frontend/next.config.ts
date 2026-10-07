@@ -1,4 +1,7 @@
 import type { NextConfig } from "next";
+import development from "../config/development.json";
+
+const developmentBackend = `http://${development.backend.host}:${development.backend.port}`;
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -6,7 +9,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: `${process.env.BACKEND_API_URL ?? "http://127.0.0.1:8000"}/api/:path*`,
+        destination: `${process.env.BACKEND_API_URL ?? developmentBackend}/api/:path*`,
       },
     ];
   },

@@ -7,10 +7,19 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.db.base import Base
 from app.db.session import get_session
 from app.main import create_app
+
+
+@pytest.fixture(autouse=True)
+def isolated_configuration(monkeypatch):
+    """Local developer secrets must never change isolated test expectations."""
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 class ApiClient:

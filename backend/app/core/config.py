@@ -1,3 +1,4 @@
+import json
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -7,6 +8,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
+DEVELOPMENT = json.loads(
+    (BACKEND_ROOT.parent / "config" / "development.json").read_text(encoding="utf-8")
+)
+DEVELOPMENT_FRONTEND = f"http://{DEVELOPMENT['frontend']['host']}:{DEVELOPMENT['frontend']['port']}"
 
 
 class Settings(BaseSettings):
@@ -20,7 +25,7 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = None
     openai_model: str = Field(default="gpt-5-mini", min_length=1, max_length=100)
     ai_timeout_seconds: float = Field(default=15, ge=1, le=30)
-    frontend_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3107"]
+    frontend_origins: list[str] = [DEVELOPMENT_FRONTEND, "http://127.0.0.1:3107"]
 
     model_config = SettingsConfigDict(
         env_file=BACKEND_ROOT / ".env",

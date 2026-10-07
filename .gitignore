@@ -25,6 +25,8 @@ coverage/
 htmlcov/
 *.tsbuildinfo
 frontend/next-env.d.ts
+# Next.js regenerates this local tooling guidance during development.
+/frontend/AGENTS.md
 backend/runtime/
 *.sqlite
 *.sqlite3

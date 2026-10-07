@@ -89,6 +89,23 @@ def test_cross_origin_write_rejected(client):
     assert response.status_code == 403
 
 
+def test_development_cors_preflight(client):
+    from app.core.config import DEVELOPMENT_FRONTEND
+
+    response = client.request(
+        "OPTIONS",
+        "/api/auth/login",
+        headers={
+            "Origin": DEVELOPMENT_FRONTEND,
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type,x-interviewai-request",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == DEVELOPMENT_FRONTEND
+    assert response.headers["access-control-allow-credentials"] == "true"
+
+
 def test_missing_signing_configuration(client, monkeypatch):
     from app.core.config import get_settings
 

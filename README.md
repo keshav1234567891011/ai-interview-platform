@@ -20,6 +20,7 @@ frontend/   Pages, components, API client, browser tests
 backend/    API, models, schemas, services, migrations, Python tests
 docs/       Design system and milestone documentation
 scripts/    Repository-local development orchestration
+config/     Shared local frontend/backend addresses
 ```
 
 ## Setup
@@ -48,9 +49,9 @@ From the repository root:
 npm run dev
 ```
 
-Starts the frontend with hot reload at `http://localhost:3000` and Uvicorn with reload at `http://localhost:8000`. PostgreSQL runs separately on port 5432. API docs: `/docs`; `GET /health` returns `{"status":"ok"}`. Ctrl+C stops the shared command.
+Starts the frontend with hot reload at `http://localhost:3000` and FastAPI at `http://127.0.0.1:8010`. The root launcher watches Python files under `backend/app` and restarts only its own Uvicorn child on edits, avoiding a stalled Windows reload worker. PostgreSQL runs separately on port 5432. Open API docs at `http://127.0.0.1:8010/docs`; `http://127.0.0.1:8010/health` returns `{"status":"ok"}`. Ctrl+C stops processes started by this shared command. A healthy existing InterviewAI service may be reused; reused processes are never terminated by the launcher.
 
-Next.js forwards `/api/*` to `127.0.0.1:8000`. Configure `BACKEND_API_URL` in frontend deployments when the backend is elsewhere. No browser-exposed secret is needed. Configure `FRONTEND_ORIGINS` as a JSON list of explicit origins; the example permits `http://localhost:3000`.
+Local addresses are defined once in `config/development.json`, shared by the root launcher, Next.js API proxy, backend development CORS defaults, and live browser validation. Next.js forwards browser `/api/*` requests to `http://127.0.0.1:8010`; the browser stays on the frontend origin. Configure `BACKEND_API_URL` in frontend deployments when the backend is elsewhere. No browser-exposed secret is needed. Keep `config/` alongside the backend/frontend when packaging this monorepo. Configure `FRONTEND_ORIGINS` as a JSON list of explicit origins for deployment; the development example permits `http://localhost:3000`. Backend listen ports do not change the permitted browser origin.
 
 ## Session security
 
@@ -77,6 +78,8 @@ npm run test:e2e
 
 Browser verification starts a production server on port 3107. Adjust the browser path to the absolute path inside your clone. UI tests mock HTTP responses; backend integration tests exercise real routes separately.
 
+For opt-in end-to-end validation against the running development stack and configured PostgreSQL, run `npm run test:live` from `frontend/` after `npm run dev`. It uses the repository-local Chromium installation, creates a clearly marked temporary account, verifies registration/login/profile persistence and curated interview progress, then deletes only that account and its dependent records. No OpenAI key or paid API call is required. Browser traces/screenshots are disabled for this test to avoid retaining authenticated state.
+
 Backend, from `backend/`:
 
 ```powershell
@@ -98,3 +101,5 @@ Each milestone branch fast-forwards from latest `main` before coding. After chec
 See [design tokens](docs/design-system.md), [foundation scope](docs/foundation.md), [authentication decisions](docs/authentication.md), [resume analysis](docs/resume-analysis.md), and [interview sessions](docs/interview-engine.md).
 
 See [milestones 02-06 verification and configuration limits](docs/milestones-02-06.md).
+
+See [current local development validation](docs/local-development.md) for the port repair and live PostgreSQL/browser verification.
