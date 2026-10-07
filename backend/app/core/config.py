@@ -14,6 +14,10 @@ class Settings(BaseSettings):
 
     app_env: Literal["development", "test", "production"] = "development"
     database_url: SecretStr | None = None
+    jwt_secret: SecretStr | None = None
+    jwt_algorithm: Literal["HS256"] = "HS256"
+    access_token_expire_minutes: int = 30
+    frontend_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3107"]
 
     model_config = SettingsConfigDict(
         env_file=BACKEND_ROOT / ".env",

@@ -6,6 +6,8 @@ import { Brand } from "./brand";
 import { Container } from "./container";
 import { ThemeToggle } from "./theme-toggle";
 import { ButtonLink } from "../ui/button";
+import { useAuth } from "../auth/auth-provider";
+import { useRouter } from "next/navigation";
 
 const links = [
   { label: "Features", href: "#features" },
@@ -14,6 +16,18 @@ const links = [
 ];
 
 export function Header() {
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  const [logoutError, setLogoutError] = useState("");
+  async function signOut() {
+    try {
+      await logout();
+      setOpen(false);
+      router.push("/");
+    } catch {
+      setLogoutError("Could not sign out. Please try again.");
+    }
+  }
   const [open, setOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -48,12 +62,29 @@ export function Header() {
         </nav>
         <div className="header-actions">
           <ThemeToggle />
-          <a className="sign-in desktop-only" href="#availability">
-            Sign In
+          <a
+            className="sign-in desktop-only"
+            href={user ? "/dashboard" : "/login"}
+          >
+            {user ? "Dashboard" : "Sign In"}
           </a>
-          <ButtonLink className="desktop-only header-cta" href="#availability">
-            Start Practicing <ArrowUpRight size={15} aria-hidden="true" />
-          </ButtonLink>
+          {user ? (
+            <>
+              <a className="sign-in desktop-only" href="/profile">
+                {user.display_name}
+              </a>
+              <button
+                className="button button-secondary desktop-only header-cta"
+                onClick={() => void signOut()}
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <ButtonLink className="desktop-only header-cta" href="/register">
+              Start Practicing <ArrowUpRight size={15} aria-hidden="true" />
+            </ButtonLink>
+          )}
           <button
             ref={menuButton}
             className="icon-button mobile-menu-button"
@@ -81,13 +112,32 @@ export function Header() {
             {link.label}
           </a>
         ))}
-        <a href="#availability" onClick={() => setOpen(false)}>
-          Sign In <span>Coming soon</span>
+        <a href={user ? "/dashboard" : "/login"} onClick={() => setOpen(false)}>
+          {user ? "Dashboard" : "Sign In"}
         </a>
-        <ButtonLink href="#availability" onClick={() => setOpen(false)}>
-          Start Practicing <ArrowUpRight size={16} aria-hidden="true" />
-        </ButtonLink>
+        {user ? (
+          <>
+            <a href="/profile" onClick={() => setOpen(false)}>
+              Profile
+            </a>
+            <button
+              className="button button-secondary"
+              onClick={() => void signOut()}
+            >
+              Logout
+            </button>
+          </>
+        ) : (
+          <ButtonLink href="/register" onClick={() => setOpen(false)}>
+            Start Practicing <ArrowUpRight size={16} aria-hidden="true" />
+          </ButtonLink>
+        )}
       </nav>
+      {logoutError && (
+        <p className="form-error" role="alert">
+          {logoutError}
+        </p>
+      )}
     </header>
   );
 }

@@ -1,6 +1,7 @@
 from collections.abc import Iterator
 from functools import lru_cache
 
+from fastapi import HTTPException
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session
 
@@ -10,7 +11,7 @@ from app.core.config import get_settings
 def get_database_url() -> str:
     url = get_settings().database_url
     if url is None:
-        raise RuntimeError("Configure DATABASE_URL in backend/.env before using the database")
+        raise HTTPException(503, "Configure DATABASE_URL in backend/.env before using the database")
     return url.get_secret_value()
 
 

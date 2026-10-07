@@ -1,174 +1,90 @@
 # InterviewAI
 
-Thoughtful preparation for the interview ahead. InterviewAI is a technical mock interview platform being built for students and job candidates, with personalized practice, structured feedback, and a clearer view of progress.
+A technical interview preparation workspace for students and job candidates. The landing page contains clearly labeled demo dashboards; authenticated pages use real persisted account state.
 
-**Current milestone: `01-foundation-ui` — project foundation, design system, premium landing page, and backend foundation.**
+## Current capabilities
 
-The landing page is working. Its dashboards contain explicitly labeled, static demonstration data. Authentication, resume processing, interviews, AI evaluation, and analytics are **planned, not implemented**. Start Practicing and Sign In lead to an availability notice. Privacy and Terms lead to a placeholder notice.
+- **02 — Accounts:** PostgreSQL user persistence, Argon2 password hashing, JWT sessions, registration, login, logout, and protected account access.
+- Profile, resume analysis, interviews, and AI assistance follow in subsequent milestones. Detailed scoring is not implemented yet.
 
-## Planned capabilities
+## Stack and architecture
 
-- Account creation, candidate profiles, and interview history
-- Resume upload, skill extraction, and job description analysis
-- Role-specific AI questions and adaptive interview difficulty
-- Technical, reasoning, and communication evaluation
-- Strengths, weaknesses, skill gaps, and personalized recommendations
-- Performance analytics and progress tracking
-
-These belong to later milestones. No business endpoints, application tables, fake API integration, or real candidate records are included here.
-
-## Tech stack
-
-| Layer | Foundation |
-| --- | --- |
-| Frontend | Next.js App Router, React, strict TypeScript, Tailwind CSS |
-| UI | Geist, Lucide React, reusable local primitives, semantic CSS tokens |
-| Backend | Python, FastAPI, Pydantic, pydantic-settings, Uvicorn |
-| Database | PostgreSQL, SQLAlchemy, Psycopg |
-| Migrations | Alembic, ready for future model discovery |
-| Verification | ESLint, TypeScript, Playwright, axe-core, pytest, Ruff |
-
-JWT, OpenAI integration, Docker, and Redis are future considerations. No API key is needed for this milestone. CSS handles the small animations; no animation or charting library is necessary yet.
-
-## Architecture
-
-The frontend and backend are separate applications. The Next.js page composes reusable layout, landing, and UI components. Only navigation and the theme toggle need client-side state. Geist font files are served locally by the installed package, so builds do not fetch fonts from Google.
-
-FastAPI exposes `GET /health` with a Pydantic response schema. Database settings come from the environment or a project-local `backend/.env`. The SQLAlchemy engine is created on demand and does not connect during import or health checks. There are no application database models yet. Alembic uses the shared declarative metadata and reads the same database configuration.
+Next.js App Router, React, strict TypeScript, Tailwind CSS, Geist, and Lucide power the frontend. FastAPI, Pydantic, SQLAlchemy 2.x, Alembic, and Psycopg power the PostgreSQL backend. Layout, UI, and feature components share semantic dark/light theme tokens.
 
 ```text
-ai-interview-platform/
-├── frontend/
-│   ├── app/                 # App Router, metadata, favicon, global theme
-│   ├── components/
-│   │   ├── layout/          # Brand, container, navigation, theme, footer
-│   │   ├── landing/         # Landing sections and demonstration dashboards
-│   │   └── ui/              # Buttons, cards, section headings
-│   ├── lib/                 # Explicitly static demo data
-│   ├── public/              # Public assets
-│   └── tests/               # Responsive and accessibility browser checks
-├── backend/
-│   ├── app/
-│   │   ├── api/             # Health router
-│   │   ├── core/            # Environment configuration
-│   │   ├── db/              # Declarative base, lazy engine, session dependency
-│   │   ├── models/          # Reserved for future models
-│   │   ├── schemas/         # Typed API responses
-│   │   ├── services/        # Reserved for future business logic
-│   │   └── main.py          # Application factory and ASGI app
-│   ├── alembic/             # Migration environment; no migrations yet
-│   ├── tests/
-│   ├── .env.example         # Placeholders only
-│   ├── requirements.txt
-│   └── requirements-dev.txt
-├── docs/
-├── .gitignore
-└── README.md
+frontend/   Pages, components, API client, browser tests
+backend/    API, models, schemas, services, migrations, Python tests
+docs/       Design system and milestone documentation
+scripts/    Repository-local development orchestration
 ```
 
-## Prerequisites
+## Setup
 
-Use Node.js 24 LTS and Python 3.12 or newer; this milestone was developed with Node 24 and Python 3.14. PostgreSQL is needed only when connecting to a database or running online migrations. Install any missing runtimes or PostgreSQL manually. Project setup does not install system-wide software or change global settings.
-
-## Frontend setup and running
-
-Run from the repository root in PowerShell:
+Use Node.js 24 and Python 3.12+. Install missing runtimes and PostgreSQL manually. From the repository root in PowerShell:
 
 ```powershell
-Set-Location frontend
-npm ci
+npm --prefix frontend ci
+python -m venv backend/.venv
+backend/.venv/Scripts/python.exe -m pip install -r backend/requirements-dev.txt
+```
+
+Create `backend/.env` manually using `backend/.env.example` as the format. Set `DATABASE_URL` to your dedicated PostgreSQL database, and `JWT_SECRET` to a cryptographically random value of at least 32 bytes. Never paste secrets into chat or commit them. URL-encode special characters in database credentials. Placeholder values are not live credentials. `/health` works without a database; account endpoints require database and JWT configuration.
+
+Apply reviewed migrations from `backend/`:
+
+```powershell
+.venv/Scripts/python.exe -m alembic upgrade head
+```
+
+## Development
+
+From the repository root:
+
+```powershell
 npm run dev
 ```
 
-Open `http://localhost:3000`. There is no frontend environment configuration or backend connection yet.
+Starts the frontend with hot reload at `http://localhost:3000` and Uvicorn with reload at `http://localhost:8000`. PostgreSQL runs separately on port 5432. API docs: `/docs`; `GET /health` returns `{"status":"ok"}`. Ctrl+C stops the shared command.
 
-Frontend checks, from `frontend/`:
+Next.js forwards `/api/*` to `127.0.0.1:8000`. Configure `BACKEND_API_URL` in frontend deployments when the backend is elsewhere. No browser-exposed secret is needed. Configure `FRONTEND_ORIGINS` as a JSON list of explicit origins; the example permits `http://localhost:3000`.
+
+## Session security
+
+JWTs stay in an HttpOnly, SameSite=Lax cookie, never localStorage. Cookies are Secure in production. Browser writes require a custom header and an allowed Origin when supplied. Credentialed CORS uses explicit origins. Production requires HTTPS with frontend/backend routed under the same site.
+
+JWT verification pins HS256, expiration, issuer, audience, and the user's session version. Logout revokes all existing account sessions. There is no refresh token; sign in again after expiry. Passwords use Argon2. Validation responses omit raw inputs; database errors remain generic. Auth attempts have a per-process limit; multiple production workers also require shared ingress throttling. Email verification and password reset are future work.
+
+## Checks
+
+Frontend, from `frontend/`:
 
 ```powershell
 npm run lint
 npm run typecheck
 npm run build
-npm run start
-```
-
-Browser verification launches its own production server on port 3107. Keep that port available. Run from `frontend/` and set the browser directory to the absolute path **inside your clone**:
-
-```powershell
 $env:PLAYWRIGHT_BROWSERS_PATH="C:\Users\Asus\Project\ai-interview-platform\.local\browsers"
 npx playwright install chromium --no-shell
 npm run test:e2e
 ```
 
-The suite checks six viewport widths in dark and light themes, horizontal overflow, automated WCAG A/AA accessibility, mobile navigation, Escape behavior, theme persistence, placeholder actions, skip-link focus, and reduced motion. Browser packages and generated reports are ignored by Git.
+Browser verification starts a production server on port 3107. Adjust the browser path to the absolute path inside your clone. UI tests mock HTTP responses; backend integration tests exercise real routes separately.
 
-## Backend setup and running
-
-From the repository root in PowerShell:
+Backend, from `backend/`:
 
 ```powershell
-Set-Location backend
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+.venv/Scripts/python.exe -m pytest
+.venv/Scripts/python.exe -m ruff check app alembic tests
+.venv/Scripts/python.exe -m ruff format --check app alembic tests
+.venv/Scripts/python.exe -m pip check
+.venv/Scripts/python.exe -m alembic heads
 ```
 
-Using the virtual environment executable directly avoids changing PowerShell execution policies. Production dependencies alone are in `requirements.txt`; the development file adds tests and lint tooling. Never install these dependencies into global Python.
+Integration tests use isolated in-memory SQLite databases. Migrations are round-trip tested and compared with ORM metadata, and PostgreSQL SQL is validated offline with `scripts/validate_migrations.py` from `backend/`. These checks do not claim live PostgreSQL connectivity. Run `npm run test:dev-config` at the root to validate shared development configuration.
 
-Health endpoint: `http://127.0.0.1:8000/health`
+## Git and security
 
-```json
-{"status":"ok"}
-```
+Each milestone branch fast-forwards from latest `main` before coding. After checks and source/secret review, commit and push it, then fast-forward and push `main`. Never force push or rewrite published history. Preserve the repository-local GitHub identity; do not modify global Git configuration or add co-author trailers.
 
-API documentation: `http://127.0.0.1:8000/docs`. The health endpoint reports application liveness; it does not test PostgreSQL connectivity.
+**Never commit `.env` files, credentials, or uploaded personal documents.** Examples contain placeholders only. Environments, caches, browsers, and artifacts stay repository-local and ignored. Detailed evaluation is a later milestone.
 
-Backend checks, from `backend/`:
-
-```powershell
-.\.venv\Scripts\python.exe -m pytest
-.\.venv\Scripts\python.exe -m ruff check .
-.\.venv\Scripts\python.exe -m ruff format --check .
-.\.venv\Scripts\python.exe -m pip check
-.\.venv\Scripts\python.exe -m alembic heads
-```
-
-## PostgreSQL and environment setup
-
-No credentials are required to run the current app or health tests. Before using database functionality, create a PostgreSQL database and a dedicated application user manually. Create `backend/.env` yourself using `backend/.env.example` as the shape:
-
-```dotenv
-DATABASE_URL=postgresql+psycopg://USERNAME:PASSWORD@localhost:5432/DATABASE_NAME
-APP_ENV=development
-```
-
-Replace placeholders locally. URL-encode special characters in the username and password. Supported `APP_ENV` values are `development`, `test`, and `production`. Set environment variables in deployment rather than committing configuration. The database URL is redacted in settings representations and validation errors.
-
-Alembic is ready, but no migrations are needed yet. In a later milestone, register models in `app/models/__init__.py`, then run from `backend/`:
-
-```powershell
-.\.venv\Scripts\python.exe -m alembic revision --autogenerate -m "describe schema change"
-# Review the generated migration before applying it.
-.\.venv\Scripts\python.exe -m alembic upgrade head
-```
-
-Online migrations require a reachable PostgreSQL instance and a valid local `DATABASE_URL`.
-
-## Development workflow and Git strategy
-
-Keep each milestone scoped to its feature branch. The foundation branch is `01-foundation-ui`; do not merge it into `main` until it has been reviewed. Later milestones should use their explicitly agreed branch names. Never force push or rewrite published history.
-
-Before committing: inspect `git status`, review changed files, run the relevant checks, review staged content for secrets, and stage only intended project files. The foundation commit message is:
-
-```text
-feat: establish project foundation and premium UI
-```
-
-Push the foundation branch to the configured repository origin with `git push -u origin 01-foundation-ui`. A remote URL and an authenticated Git workflow are required. Do not embed a token in a remote URL.
-
-## Security
-
-**Never commit `.env` files or credentials.** `.env.example` must contain placeholders only. Real passwords, API keys, tokens, cookies, and private keys must stay out of source, logs, screenshots, and chat. No real credentials have been created for this milestone.
-
-Dependency environments, caches, temporary files, and browser downloads used during automated setup are kept inside this repository and ignored. Global Git, Node, Python, PostgreSQL, and Windows configuration are not changed. Review ignored files before sharing a directory archive.
-
-See [the design system](docs/design-system.md), [milestone scope](docs/foundation.md), and [verification report](docs/verification.md) for implementation and check details.
+See [design tokens](docs/design-system.md), [foundation scope](docs/foundation.md), and [authentication decisions](docs/authentication.md).

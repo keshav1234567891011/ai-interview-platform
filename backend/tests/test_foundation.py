@@ -36,8 +36,8 @@ def test_application_metadata_and_schema() -> None:
     application = create_app()
     assert application.title == "InterviewAI API"
     assert application.version == "0.1.0"
-    assert set(application.openapi()["paths"]) == {"/health"}
-    assert not Base.metadata.tables
+    assert "/health" in application.openapi()["paths"]
+    assert "users" in Base.metadata.tables
 
 
 def test_settings_validate_and_redact_database_url(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -57,7 +57,9 @@ def test_missing_database_configuration_is_explicit(monkeypatch: pytest.MonkeyPa
         "app.db.session.get_settings", lambda: Settings(_env_file=None, database_url=None)
     )
     get_engine.cache_clear()
-    with pytest.raises(RuntimeError, match="Configure DATABASE_URL"):
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException, match="Configure DATABASE_URL"):
         get_database_url()
     get_settings.cache_clear()
 

@@ -1,12 +1,22 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/auth/me", (route) =>
+    route.fulfill({ status: 401, json: { detail: "Please sign in" } }),
+  );
+});
+
 for (const width of [320, 375, 768, 1024, 1440, 1920]) {
   test(`landing layout at ${width}px in both themes`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
     await page.evaluate(() =>
-      Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => {}))),
+      Promise.all(
+        document
+          .getAnimations()
+          .map((animation) => animation.finished.catch(() => {})),
+      ),
     );
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
       "Practice Smarter.Interview Better.",
@@ -20,7 +30,11 @@ for (const width of [320, 375, 768, 1024, 1440, 1920]) {
           .getByRole("button", { name: "Switch to light mode" })
           .click();
       await page.evaluate(() =>
-        Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => {}))),
+        Promise.all(
+          document
+            .getAnimations()
+            .map((animation) => animation.finished.catch(() => {})),
+        ),
       );
       expect(
         await page.evaluate(
@@ -30,10 +44,15 @@ for (const width of [320, 375, 768, 1024, 1440, 1920]) {
       const result = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
         .analyze();
-      expect(result.violations.map(violation => ({
-        id: violation.id,
-        nodes: violation.nodes.map(node => ({ target: node.target, summary: node.failureSummary })),
-      }))).toEqual([]);
+      expect(
+        result.violations.map((violation) => ({
+          id: violation.id,
+          nodes: violation.nodes.map((node) => ({
+            target: node.target,
+            summary: node.failureSummary,
+          })),
+        })),
+      ).toEqual([]);
       if (width === 1440 || width === 375) {
         await page.screenshot({
           path: `test-results/landing-${width}-${theme}.png`,
@@ -70,7 +89,7 @@ test("mobile navigation supports keyboard closing and anchor navigation", async 
   ).toBeHidden();
 });
 
-test("theme persists and placeholders explain availability without requests", async ({
+test("theme persists and practice links open registration", async ({
   page,
 }) => {
   const failedRequests: string[] = [];
@@ -82,8 +101,10 @@ test("theme persists and placeholders explain availability without requests", as
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.getByRole("link", { name: "Start Practicing" }).first().click();
-  await expect(page).toHaveURL(/#availability$/);
-  await expect(page.getByRole("note")).toContainText("Coming soon");
+  await expect(page).toHaveURL(/\/register$/);
+  await expect(
+    page.getByRole("heading", { name: "Create your account" }),
+  ).toBeVisible();
   expect(errors).toEqual([]);
   expect(failedRequests).toEqual([]);
 });
@@ -105,17 +126,24 @@ test("skip link and reduced motion remain accessible", async ({ page }) => {
   ).toBe("none");
 });
 
-test("hovered actions and expanded mobile navigation keep accessible contrast", async ({ page }) => {
+test("hovered actions and expanded mobile navigation keep accessible contrast", async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   for (const theme of ["dark", "light"]) {
-    if (theme === "light") await page.getByRole("button", { name: "Switch to light mode" }).click();
+    if (theme === "light")
+      await page.getByRole("button", { name: "Switch to light mode" }).click();
     await page.getByRole("link", { name: "Start Practicing" }).first().hover();
-    const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
-    expect(result.violations.map(violation => violation.id)).toEqual([]);
+    const result = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+      .analyze();
+    expect(result.violations.map((violation) => violation.id)).toEqual([]);
   }
   await page.setViewportSize({ width: 375, height: 812 });
   await page.getByRole("button", { name: "Open navigation menu" }).click();
-  const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
-  expect(result.violations.map(violation => violation.id)).toEqual([]);
+  const result = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .analyze();
+  expect(result.violations.map((violation) => violation.id)).toEqual([]);
 });

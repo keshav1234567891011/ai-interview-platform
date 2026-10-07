@@ -1,4 +1,4 @@
-import { ArrowRight, AudioLines } from "lucide-react";
+﻿import { ArrowRight, AudioLines } from "lucide-react";
 import { Container } from "../layout/container";
 import { ButtonLink } from "../ui/button";
 
@@ -17,13 +17,13 @@ export function FinalCTA() {
             <br className="desktop-only" /> thoughtful feedback, and a clear
             path to improvement.
           </p>
-          <ButtonLink href="#availability">
+          <ButtonLink href="/register">
             Start Practicing <ArrowRight size={17} aria-hidden="true" />
           </ButtonLink>
           <div id="availability" className="availability-note" role="note">
             <span className="availability-dot" aria-hidden="true" />
             <span>
-              Coming soon. Practice and sign in will be available at launch.
+              Create your account to begin your preparation.
               <br />
               This foundation preview demonstrates the planned experience.
             </span>

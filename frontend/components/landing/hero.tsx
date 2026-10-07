@@ -1,4 +1,4 @@
-import { ArrowRight, Check, Sparkles } from "lucide-react";
+﻿import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { Container } from "../layout/container";
 import { ButtonLink } from "../ui/button";
 import { HeroPreview } from "./hero-preview";
@@ -22,7 +22,7 @@ export function Hero() {
             structured feedback, skill insights, and performance tracking.
           </p>
           <div className="hero-actions">
-            <ButtonLink href="#availability">
+            <ButtonLink href="/register">
               Start Practicing <ArrowRight size={17} aria-hidden="true" />
             </ButtonLink>
             <ButtonLink href="#features" variant="secondary">

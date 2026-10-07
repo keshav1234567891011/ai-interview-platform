@@ -1,0 +1,5 @@
+{
+  "name": "interviewai",
+  "private": true,
+  "scripts": { "dev": "node scripts/dev.mjs", "test:dev-config": "node scripts/dev.mjs --check" }
+}
