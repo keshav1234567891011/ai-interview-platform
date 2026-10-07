@@ -1,0 +1,189 @@
+.resume-columns {
+  grid-template-columns: 1fr 1.25fr;
+  align-items: start;
+}
+.upload-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  padding: 35px 20px;
+  background: var(--background);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  text-align: center;
+  cursor: pointer;
+  margin-bottom: 17px;
+}
+.upload-zone:focus-within {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+}
+.upload-zone > svg {
+  color: var(--primary);
+}
+.upload-zone strong {
+  font-size: 13px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.upload-zone > span {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.upload-zone:hover {
+  border-color: var(--primary);
+}
+.privacy-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 21px;
+  padding-top: 17px;
+  border-top: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 10px;
+  line-height: 1.9;
+}
+.privacy-note svg {
+  color: var(--primary);
+  margin-top: 3px;
+}
+.current-resume {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 22px;
+}
+.current-resume > div {
+  min-width: 0;
+}
+.current-resume h3 {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  font-weight: 500;
+}
+.current-resume p {
+  font-size: 10px;
+  color: var(--muted-foreground);
+  margin-top: 5px;
+}
+.resume-skills h3 {
+  font-size: 14px;
+  font-weight: 500;
+}
+.resume-skills .skill-picker {
+  gap: 7px;
+}
+.resume-skills .skill-picker label {
+  padding: 7px 9px;
+  font-size: 10px;
+}
+.resume-skill-actions {
+  margin-top: 22px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 13px;
+}
+.resume-skill-actions > span {
+  font-size: 11px;
+  color: var(--success);
+}
+.job-analysis-panel {
+  margin-bottom: 20px;
+}
+.job-analysis-panel textarea {
+  min-height: 190px;
+}
+.match-overview {
+  display: flex;
+  align-items: center;
+  gap: 35px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 24px;
+  margin-bottom: 23px;
+}
+.match-overview > div {
+  min-width: 200px;
+}
+.match-overview strong {
+  display: block;
+  color: var(--primary);
+  font-size: 43px;
+  letter-spacing: -1px;
+  font-weight: 550;
+  margin: 10px 0;
+}
+.match-overview p:not(.eyebrow) {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 1.9;
+}
+.match-overview > p {
+  max-width: 300px;
+}
+.match-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+.match-columns h3 {
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.match-columns > div:first-child h3 {
+  color: var(--success);
+}
+.match-columns > div:nth-child(2) h3 {
+  color: var(--warning);
+}
+.skill-chips.matched > span {
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success), transparent 70%);
+  background: color-mix(in srgb, var(--success), transparent 95%);
+}
+.skill-chips.missing > span {
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning), transparent 70%);
+  background: color-mix(in srgb, var(--warning), transparent 95%);
+}
+.match-columns .skill-chips p {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.preferred-skills {
+  margin-top: 18px;
+}
+.preferred-skills h3 {
+  font-size: 13px;
+  font-weight: 500;
+}
+@media (max-width: 900px) {
+  .resume-columns {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 539px) {
+  .match-overview {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  .match-columns {
+    grid-template-columns: 1fr;
+    gap: 13px;
+  }
+  .privacy-note {
+    font-size: 11px;
+  }
+  .job-analysis-panel .form-actions > span {
+    font-size: 11px;
+  }
+}

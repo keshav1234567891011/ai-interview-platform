@@ -6,6 +6,8 @@ import {
   UserRound,
   ArrowUpRight,
   ShieldCheck,
+  FileText,
+  Search,
 } from "lucide-react";
 import { useAuth } from "../auth/auth-provider";
 
@@ -13,6 +15,8 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user } = useAuth();
   const links = [
+    { href: "/resume", label: "Resume workspace", icon: FileText },
+    { href: "/jobs/analyze", label: "Job analysis", icon: Search },
     { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
     { href: "/profile", label: "Profile & settings", icon: UserRound },
   ];

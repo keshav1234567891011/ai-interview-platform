@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, realpathSync } from "node:fs";
+import { existsSync, realpathSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -15,7 +15,9 @@ if (process.argv.includes("--check")) {
   console.log("Root dev configuration valid: frontend localhost:3000; backend localhost:8000, --reload.");
   process.exit(0);
 }
-const env = { ...process.env, NEXT_TELEMETRY_DISABLED: "1" };
+const temporaryDirectory = path.join(root, ".local", "tmp");
+mkdirSync(temporaryDirectory, { recursive: true });
+const env = { ...process.env, TEMP: temporaryDirectory, TMP: temporaryDirectory, NEXT_TELEMETRY_DISABLED: "1" };
 const children = [
   spawn(process.execPath, [next, "dev", "--hostname", "localhost", "--port", "3000"], { cwd: path.join(root, "frontend"), env, stdio: "inherit" }),
   spawn(python, ["-m", "uvicorn", "app.main:app", "--reload", "--host", "127.0.0.1", "--port", "8000"], { cwd: path.join(root, "backend"), env, stdio: "inherit" }),

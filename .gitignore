@@ -25,6 +25,10 @@ coverage/
 htmlcov/
 *.tsbuildinfo
 frontend/next-env.d.ts
+backend/runtime/
+*.sqlite
+*.sqlite3
+*.db
 *.log
 
 # Editor and operating system temporary files.

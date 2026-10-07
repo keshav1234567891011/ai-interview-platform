@@ -1,3 +1,5 @@
+import tempfile
+
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,10 +10,14 @@ from starlette.requests import Request
 from app.api.auth import router as auth_router
 from app.api.health import router as health_router
 from app.api.profile import router as profile_router
-from app.core.config import get_settings
+from app.api.resumes import router as resumes_router
+from app.core.config import BACKEND_ROOT, get_settings
 
 
 def create_app() -> FastAPI:
+    temporary_directory = BACKEND_ROOT / "runtime" / "tmp"
+    temporary_directory.mkdir(parents=True, exist_ok=True)
+    tempfile.tempdir = str(temporary_directory)
     application = FastAPI(
         title="InterviewAI API",
         description=(
@@ -22,6 +28,7 @@ def create_app() -> FastAPI:
     application.include_router(health_router)
     application.include_router(auth_router)
     application.include_router(profile_router)
+    application.include_router(resumes_router)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=get_settings().frontend_origins,

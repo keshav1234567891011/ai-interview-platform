@@ -3,6 +3,7 @@ import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import "./workspace.css";
 import "./workspace-layout.css";
+import "./resume.css";
 import { AuthProvider } from "@/components/auth/auth-provider";
 
 export const metadata: Metadata = {

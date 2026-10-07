@@ -1,0 +1,11 @@
+# Resume and job analysis
+
+Milestone 04 accepts PDF and DOCX documents up to 5 MB. Extension, MIME, signature, archive size, and text limits are validated. Encrypted, malformed, empty, scanned-only, oversized, and macro-bearing documents are rejected with safe messages. DOCX text includes paragraphs and table cells; PDF parsing supports selectable text, not OCR. Uploaded content is never executed, and ZIP contents are never extracted to arbitrary paths.
+
+Private originals live under ignored `backend/runtime/uploads` using generated UUID filenames. Parsed text stays in account-owned database rows. Neither raw text nor storage paths are included in resume API responses or application logs. Metadata filenames are sanitized for display. Multipart temporary files also remain under ignored `backend/runtime/tmp`, including when Uvicorn is run directly. The small storage protocol permits a future cloud adapter without changing routes. Storage and database backups require access controls, encryption, and a deliberate retention policy before deployment.
+
+Technical skill extraction uses a canonical vocabulary, aliases, and word boundaries. Candidates can correct extracted skills independently of their profile. Job analysis distinguishes required/default and preferred sections where explicit wording permits it. Matching uses recognized required skills against the selected/latest resume, falling back to profile skills. Unrecognized descriptions produce no percentage, rather than a misleading zero or perfect match. This heuristic does not infer proficiency, experience, hiring suitability, or semantic equivalence beyond its vocabulary.
+
+The parser is designed for bounded initial uploads. A public production deployment should also apply request size/rate limits and isolate document parsing workers with memory and execution limits. Files and text are retained until removed through a future retention workflow or authorized administration; no automatic deletion is claimed.
+
+See the maintained [pypdf text extraction guidance](https://pypdf.readthedocs.io/en/latest/user/extract-text.html) and [python-docx document guide](https://python-docx.readthedocs.io/en/latest/user/documents.html). Automated fixtures are generated in memory; no real resumes or binary fixtures are committed.

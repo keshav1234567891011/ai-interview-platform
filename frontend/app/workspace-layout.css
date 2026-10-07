@@ -6,6 +6,7 @@
   min-height: calc(100vh - 78px);
 }
 .workspace-sidebar {
+  min-width: 0;
   border-right: 1px solid var(--border);
   padding: 35px 19px 20px;
   display: flex;
@@ -394,7 +395,7 @@
 }
 @media (max-width: 799px) {
   .workspace-shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .workspace-sidebar {
     position: static;
