@@ -24,6 +24,7 @@ pytest-cache-files-*/
 coverage/
 htmlcov/
 *.tsbuildinfo
+frontend/next-env.d.ts
 *.log
 
 # Editor and operating system temporary files.

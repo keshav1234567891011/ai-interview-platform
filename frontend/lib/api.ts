@@ -27,6 +27,8 @@ export async function api<T>(
     throw new ApiError(0, "We couldn’t reach the server. Please try again.");
   }
   if (!response.ok) {
+    if (response.status === 401 && !path.startsWith("/auth/"))
+      window.dispatchEvent(new Event("interviewai-session-expired"));
     const data = await response.json().catch(() => ({}));
     const message =
       typeof data.detail === "string"

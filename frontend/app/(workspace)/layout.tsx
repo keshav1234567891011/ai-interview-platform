@@ -1,5 +1,6 @@
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { Header } from "@/components/layout/header";
+import { WorkspaceShell } from "@/components/layout/workspace-shell";
 export default function WorkspaceLayout({
   children,
 }: {
@@ -9,7 +10,9 @@ export default function WorkspaceLayout({
     <>
       <Header />
       <main id="main-content" tabIndex={-1}>
-        <AuthGuard>{children}</AuthGuard>
+        <AuthGuard>
+          <WorkspaceShell>{children}</WorkspaceShell>
+        </AuthGuard>
       </main>
     </>
   );

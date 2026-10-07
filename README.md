@@ -5,7 +5,8 @@ A technical interview preparation workspace for students and job candidates. The
 ## Current capabilities
 
 - **02 — Accounts:** PostgreSQL user persistence, Argon2 password hashing, JWT sessions, registration, login, logout, and protected account access.
-- Profile, resume analysis, interviews, and AI assistance follow in subsequent milestones. Detailed scoring is not implemented yet.
+- **03 — Candidate workspace:** protected dashboard, real profile completion, normalized technical skills, profile editing, and safe account settings.
+- Resume analysis, interviews, and AI assistance follow in subsequent milestones. Detailed scoring is not implemented yet.
 
 ## Stack and architecture
 

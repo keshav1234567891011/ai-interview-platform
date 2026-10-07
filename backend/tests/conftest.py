@@ -51,6 +51,12 @@ def client(monkeypatch):
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
     Base.metadata.create_all(engine)
+    from app.core.skills import SKILLS
+    from app.models.profile import Skill
+
+    with Session(engine) as db:
+        db.add_all(Skill(id=id, name=name, category=category) for id, name, category in SKILLS)
+        db.commit()
     application = create_app()
 
     def sessions():

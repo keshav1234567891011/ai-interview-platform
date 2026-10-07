@@ -32,8 +32,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  useEffect(() => {
+    const expired = () => {
+      setUser(null);
+      setError("");
+    };
+    window.addEventListener("interviewai-session-expired", expired);
+    return () =>
+      window.removeEventListener("interviewai-session-expired", expired);
+  }, []);
   const refresh = useCallback(async () => {
-    setLoading(true);
     try {
       setUser(await api<User>("/auth/me"));
       setError("");
