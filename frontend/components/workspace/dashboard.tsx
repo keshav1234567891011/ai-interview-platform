@@ -13,6 +13,7 @@ import type { Dashboard as DashboardData } from "@/lib/workspace-types";
 import { Card } from "../ui/card";
 import { ButtonLink } from "../ui/button";
 import { WorkspaceState } from "../ui/workspace-state";
+import { SessionRows } from "./interview-list";
 
 export function Dashboard() {
   const { data, loading, error, reload } =
@@ -62,7 +63,7 @@ export function Dashboard() {
         <Card className="workspace-stat">
           <span>Practice sessions</span>
           <strong>{data.interview_count.toString().padStart(2, "0")}</strong>
-          <p>Your real interview history will appear here.</p>
+          <p>Sessions created in your account. Keep showing up.</p>
         </Card>
       </div>
       <div className="workspace-two-columns">
@@ -71,20 +72,24 @@ export function Dashboard() {
             <h2>Recent interviews</h2>
             <MessagesSquare size={19} aria-hidden="true" />
           </div>
-          <div className="empty-state">
-            <span className="empty-icon">
-              <MessagesSquare size={25} aria-hidden="true" />
-            </span>
-            <h3>No interviews yet.</h3>
-            <p>
-              Start your first practice session when the interview workspace is
-              available. Set your target role to get ready.
-            </p>
-            <ButtonLink href="/profile" variant="secondary">
-              Set your practice direction{" "}
-              <ArrowRight size={15} aria-hidden="true" />
-            </ButtonLink>
-          </div>
+          {data.recent_interviews.length ? (
+            <SessionRows sessions={data.recent_interviews} />
+          ) : (
+            <div className="empty-state">
+              <span className="empty-icon">
+                <MessagesSquare size={25} aria-hidden="true" />
+              </span>
+              <h3>No interviews yet.</h3>
+              <p>
+                Start your first practice session. Pick a role and take it one
+                question at a time.
+              </p>
+              <ButtonLink href="/interviews/new" variant="secondary">
+                Start your first session{" "}
+                <ArrowRight size={15} aria-hidden="true" />
+              </ButtonLink>
+            </div>
+          )}
         </Card>
         <Card className="workspace-panel">
           <div className="panel-header">
@@ -145,6 +150,8 @@ export function Dashboard() {
           Update skills
         </Link>
         <Link href="/profile#account-settings">Account settings</Link>
+        <Link href="/interviews/new">New interview</Link>
+        <Link href="/resume">Review resume</Link>
       </div>
     </>
   );

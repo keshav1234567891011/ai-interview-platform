@@ -81,13 +81,11 @@ test("resume upload handles malformed server response", async ({ page }) => {
       : route.fulfill({ json: [] }),
   );
   await page.goto("/resume");
-  await page
-    .locator("input[type=file]")
-    .setInputFiles({
-      name: "malformed.pdf",
-      mimeType: "application/pdf",
-      buffer: Buffer.from("%PDF-invalid"),
-    });
+  await page.locator("input[type=file]").setInputFiles({
+    name: "malformed.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-invalid"),
+  });
   await page
     .getByRole("button", { name: "Upload resume", exact: true })
     .click();

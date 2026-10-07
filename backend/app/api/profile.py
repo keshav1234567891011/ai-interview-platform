@@ -1,9 +1,11 @@
 from fastapi import APIRouter
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.api.dependencies import CurrentUser, DbSession
+from app.models.interview import Interview
 from app.models.profile import Skill, UserProfile
 from app.schemas.profile import ProfileResponse, ProfileUpdate, SkillResponse
+from app.services.interviews import summary
 from app.services.profile import profile_response
 
 router = APIRouter(prefix="/api", tags=["Candidate workspace"])
@@ -37,4 +39,17 @@ def update_profile(payload: ProfileUpdate, user: CurrentUser, db: DbSession):
 @router.get("/dashboard")
 def dashboard(user: CurrentUser, db: DbSession):
     profile = profile_response(db, user)
-    return {"profile": profile, "recent_interviews": [], "interview_count": 0}
+    recent = db.scalars(
+        select(Interview)
+        .where(Interview.user_id == user.id)
+        .order_by(Interview.created_at.desc())
+        .limit(5)
+    ).all()
+    count = db.scalar(
+        select(func.count()).select_from(Interview).where(Interview.user_id == user.id)
+    )
+    return {
+        "profile": profile,
+        "recent_interviews": [summary(item) for item in recent],
+        "interview_count": count,
+    }

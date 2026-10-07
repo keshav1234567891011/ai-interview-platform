@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   FileText,
   Search,
+  MessagesSquare,
 } from "lucide-react";
 import { useAuth } from "../auth/auth-provider";
 
@@ -15,9 +16,10 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user } = useAuth();
   const links = [
+    { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+    { href: "/interviews", label: "Interviews", icon: MessagesSquare },
     { href: "/resume", label: "Resume workspace", icon: FileText },
     { href: "/jobs/analyze", label: "Job analysis", icon: Search },
-    { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
     { href: "/profile", label: "Profile & settings", icon: UserRound },
   ];
   return (
@@ -29,7 +31,11 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
             <Link
               key={href}
               href={href}
-              aria-current={pathname === href ? "page" : undefined}
+              aria-current={
+                pathname === href || pathname.startsWith(`${href}/`)
+                  ? "page"
+                  : undefined
+              }
             >
               <Icon size={18} aria-hidden="true" />
               {label}
