@@ -3,6 +3,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -34,6 +35,7 @@ class Interview(Base):
     status: Mapped[str] = mapped_column(String(20), default="created")
     question_count: Mapped[int] = mapped_column(Integer)
     focus_areas: Mapped[list[str]] = mapped_column(JSON, default=list)
+    ai_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )

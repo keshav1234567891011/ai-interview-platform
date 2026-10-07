@@ -13,6 +13,9 @@ import { WorkspaceState } from "../ui/workspace-state";
 export function InterviewSetup() {
   const profile = useResource<Profile>("/profile");
   const skills = useResource<Skill[]>("/skills");
+  const capabilities = useResource<{ ai_available: boolean }>(
+    "/interviews/capabilities",
+  );
   if (
     !profile.data ||
     !skills.data ||
@@ -31,10 +34,24 @@ export function InterviewSetup() {
         }}
       />
     );
-  return <SetupForm profile={profile.data} skills={skills.data} />;
+  return (
+    <SetupForm
+      profile={profile.data}
+      skills={skills.data}
+      aiAvailable={capabilities.data?.ai_available ?? false}
+    />
+  );
 }
 
-function SetupForm({ profile, skills }: { profile: Profile; skills: Skill[] }) {
+function SetupForm({
+  profile,
+  skills,
+  aiAvailable,
+}: {
+  profile: Profile;
+  skills: Skill[];
+  aiAvailable: boolean;
+}) {
   const router = useRouter();
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -52,6 +69,7 @@ function SetupForm({ profile, skills }: { profile: Profile; skills: Skill[] }) {
           difficulty: fields.get("difficulty"),
           question_count: Number(fields.get("question_count")),
           focus_areas: selected,
+          ai_enabled: fields.get("ai_enabled") === "on",
         }),
       });
       router.push(`/interviews/${session.id}`);
@@ -149,6 +167,23 @@ function SetupForm({ profile, skills }: { profile: Profile; skills: Skill[] }) {
                 </label>
               ))}
             </fieldset>
+            <div className="ai-choice">
+              <label htmlFor="ai-enabled">
+                <input
+                  id="ai-enabled"
+                  name="ai_enabled"
+                  type="checkbox"
+                  aria-describedby="ai-privacy"
+                  disabled={busy || !aiAvailable}
+                />{" "}
+                Use AI-assisted questions
+              </label>
+              <p id="ai-privacy">
+                {aiAvailable
+                  ? "Optional. Your skills, summary, bounded resume/job excerpts, and recent answers will be sent to OpenAI to prepare questions. Curated questions remain the fallback."
+                  : "Curated questions are ready to use. AI assistance becomes available when your server is configured."}
+              </p>
+            </div>
             <p className="panel-copy">
               Your profile, reviewed resume skills, and latest job analysis also
               help shape question selection.

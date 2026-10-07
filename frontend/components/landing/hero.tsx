@@ -1,9 +1,12 @@
-﻿import { ArrowRight, Check, Sparkles } from "lucide-react";
+"use client";
+import { useAuth } from "../auth/auth-provider";
+import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { Container } from "../layout/container";
 import { ButtonLink } from "../ui/button";
 import { HeroPreview } from "./hero-preview";
 
 export function Hero() {
+  const { user } = useAuth();
   return (
     <section className="hero" aria-labelledby="hero-title">
       <Container className="hero-grid">
@@ -22,7 +25,7 @@ export function Hero() {
             structured feedback, skill insights, and performance tracking.
           </p>
           <div className="hero-actions">
-            <ButtonLink href="/register">
+            <ButtonLink href={user ? "/interviews/new" : "/register"}>
               Start Practicing <ArrowRight size={17} aria-hidden="true" />
             </ButtonLink>
             <ButtonLink href="#features" variant="secondary">
@@ -42,7 +45,8 @@ export function Hero() {
             ))}
           </div>
           <p className="hero-footnote">
-            Built for the interview ahead. And the career beyond.
+            Practice and skill insights are available. Evaluation and analytics
+            are planned.
           </p>
         </div>
         <div className="hero-visual entrance">

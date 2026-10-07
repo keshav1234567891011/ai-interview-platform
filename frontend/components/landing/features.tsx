@@ -28,7 +28,7 @@ const features = [
     icon: ListChecks,
     title: "Structured Evaluation",
     copy: "Receive feedback across technical accuracy, reasoning and communication.",
-    detail: "Understand every answer",
+    detail: "Planned - Understand every answer",
   },
   {
     icon: ScanSearch,
@@ -40,7 +40,7 @@ const features = [
     icon: ChartNoAxesCombined,
     title: "Performance Analytics",
     copy: "Track scores and progress across multiple practice sessions.",
-    detail: "See your growth",
+    detail: "Planned - See your growth",
   },
   {
     icon: BriefcaseBusiness,
@@ -64,7 +64,7 @@ export function Features() {
             plan.
           </SectionHeading>
           <span className="section-status">
-            <span /> Planned capabilities
+            <span /> Available and evolving
           </span>
         </div>
         <div className="features-grid">

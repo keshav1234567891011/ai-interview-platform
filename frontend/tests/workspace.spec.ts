@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { mockWorkspace, testProfile } from "./workspace-fixtures";
 
-for (const width of [375, 768, 1440])
+for (const width of [375, 768, 1024, 1440])
   for (const pageName of ["dashboard", "profile"]) {
     test(`${pageName} workspace accessible at ${width}px`, async ({ page }) => {
       await mockWorkspace(page);

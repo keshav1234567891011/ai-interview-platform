@@ -65,6 +65,7 @@ def session_response(interview: Interview) -> InterviewResponse:
     visible = [q for q in interview.questions if current is None or q.sequence <= current]
     return InterviewResponse(
         **base.model_dump(),
+        ai_enabled=interview.ai_enabled,
         focus_areas=interview.focus_areas,
         started_at=interview.started_at,
         duration_seconds=duration,

@@ -7,7 +7,7 @@ import { Container } from "./container";
 import { ThemeToggle } from "./theme-toggle";
 import { ButtonLink } from "../ui/button";
 import { useAuth } from "../auth/auth-provider";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 const links = [
   { label: "Features", href: "#features" },
@@ -16,6 +16,8 @@ const links = [
 ];
 
 export function Header() {
+  const pathname = usePathname();
+  const sectionLink = (hash: string) => (pathname === "/" ? hash : `/${hash}`);
   const { user, logout } = useAuth();
   const router = useRouter();
   const [logoutError, setLogoutError] = useState("");
@@ -55,7 +57,7 @@ export function Header() {
         <Brand />
         <nav className="desktop-nav" aria-label="Main navigation">
           {links.map((link) => (
-            <a key={link.href} href={link.href}>
+            <a key={link.href} href={sectionLink(link.href)}>
               {link.label}
             </a>
           ))}
@@ -70,7 +72,11 @@ export function Header() {
           </a>
           {user ? (
             <>
-              <a className="sign-in desktop-only" href="/profile">
+              <a
+                className="sign-in desktop-only header-user"
+                href="/profile"
+                aria-label={`Profile for ${user.display_name}`}
+              >
                 {user.display_name}
               </a>
               <button
@@ -108,7 +114,11 @@ export function Header() {
         aria-label="Mobile navigation"
       >
         {links.map((link) => (
-          <a key={link.href} href={link.href} onClick={() => setOpen(false)}>
+          <a
+            key={link.href}
+            href={sectionLink(link.href)}
+            onClick={() => setOpen(false)}
+          >
             {link.label}
           </a>
         ))}

@@ -22,7 +22,8 @@ def create_app() -> FastAPI:
     application = FastAPI(
         title="InterviewAI API",
         description=(
-            "Backend foundation for InterviewAI. Interview and AI capabilities are planned."
+            "Technical interview practice with private profiles, resume skill analysis, "
+            "persisted sessions, and optional AI assistance. Detailed evaluation is planned."
         ),
         version="0.1.0",
     )

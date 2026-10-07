@@ -6,6 +6,6 @@ The 54-prompt bank covers 18 technical topics at three difficulty levels. Role, 
 
 Sessions transition from `created` to `in_progress`, then `completed` or `abandoned`. Only the current question accepts a draft or final submission; submitted answers cannot be overwritten. Completion follows the last submission. Start is idempotent; closed sessions cannot restart. Dashboard and history return actual records and counts, without scores.
 
-The editor offers explicit draft saving and Ctrl/Cmd+S. Saved drafts recover from backend state across reloads and devices. Browser unload prompts protect unsaved edits. Save before navigating through workspace links; unsaved text is intentionally not placed in browser storage. Completion duration uses stored start and completion timestamps, not an invented timer or deadline.
+The editor offers explicit draft saving and Ctrl/Cmd+S. Saved drafts recover from backend state across reloads and devices. Browser unload and workspace-link prompts protect unsaved edits. Save before leaving; unsaved text is intentionally not placed in browser storage. Completion duration uses stored start and completion timestamps, not an invented timer or deadline.
 
 Tests exercise authorization, creation, selection, draft recovery, ordered submission, terminal states, real history, migration round trips, frontend requests, responsive layouts, and both themes. Detailed evaluation remains future work.

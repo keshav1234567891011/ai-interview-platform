@@ -20,14 +20,15 @@ mkdirSync(temporaryDirectory, { recursive: true });
 const env = { ...process.env, TEMP: temporaryDirectory, TMP: temporaryDirectory, NEXT_TELEMETRY_DISABLED: "1" };
 const children = [
   spawn(process.execPath, [next, "dev", "--hostname", "localhost", "--port", "3000"], { cwd: path.join(root, "frontend"), env, stdio: "inherit" }),
-  spawn(python, ["-m", "uvicorn", "app.main:app", "--reload", "--host", "127.0.0.1", "--port", "8000"], { cwd: path.join(root, "backend"), env, stdio: "inherit" }),
+  spawn(python, ["-m", "uvicorn", "app.main:app", "--reload", "--reload-dir", "app", "--host", "127.0.0.1", "--port", "8000"], { cwd: path.join(root, "backend"), env, stdio: "inherit" }),
 ];
 let stopping = false;
 function stop(code = 0) {
   if (stopping) return;
   stopping = true;
   for (const child of children) {
-    if (windows && child.pid) spawn("taskkill", ["/pid", String(child.pid), "/T"], { windowsHide: true, stdio: "ignore" });
+    if (child.exitCode !== null || child.signalCode !== null) continue;
+    if (windows && child.pid) spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { windowsHide: true, stdio: "ignore" });
     else child.kill("SIGTERM");
   }
   process.exitCode = code;

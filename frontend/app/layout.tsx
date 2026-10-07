@@ -10,7 +10,7 @@ import { AuthProvider } from "@/components/auth/auth-provider";
 export const metadata: Metadata = {
   title: "InterviewAI — Practice Smarter. Interview Better.",
   description:
-    "A preview of InterviewAI: personalized technical interview practice, structured feedback, and a clearer path to improvement. Coming soon.",
+    "InterviewAI: role-specific technical interview practice, resume skill insights, and optional AI-assisted questions. Build confidence one session at a time.",
 };
 
 const themeScript = `try{document.documentElement.dataset.theme=localStorage.getItem('interviewai-theme')==='light'?'light':'dark'}catch{document.documentElement.dataset.theme='dark'}`;

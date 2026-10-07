@@ -133,7 +133,7 @@ export function InterviewSession({ id }: { id: string }) {
                   device after saving.
                 </p>
                 <Button onClick={() => transition("start")} disabled={busy}>
-                  {busy ? "Starting…" : "Begin interview"}
+                  {busy ? "Preparing next question…" : "Begin interview"}
                   <ArrowRight size={16} aria-hidden="true" />
                 </Button>
               </Card>
@@ -226,23 +226,48 @@ function AnswerEditor({
       }
     }
     window.addEventListener("beforeunload", protect);
-    return () => window.removeEventListener("beforeunload", protect);
+    function protectNavigation(event: MouseEvent) {
+      if (!dirty || !(event.target instanceof Element)) return;
+      const link = event.target.closest("a");
+      if (
+        !link ||
+        new URL(link.href, window.location.href).pathname ===
+          window.location.pathname
+      )
+        return;
+      if (
+        !window.confirm("Your latest edits are not saved. Leave this session?")
+      ) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    }
+    document.addEventListener("click", protectNavigation, true);
+    return () => {
+      window.removeEventListener("beforeunload", protect);
+      document.removeEventListener("click", protectNavigation, true);
+    };
   }, [dirty]);
   async function save(submit: boolean) {
     setBusy(true);
     setError("");
     setSaved(false);
     try {
-      onUpdate(
-        await api<Interview>(
-          `/interviews/${interview.id}/questions/${question.id}/answer`,
-          {
-            method: "PUT",
-            body: JSON.stringify({ answer_text: draft, submit }),
-          },
-        ),
+      const updated = await api<Interview>(
+        `/interviews/${interview.id}/questions/${question.id}/answer`,
+        {
+          method: "PUT",
+          body: JSON.stringify({ answer_text: draft, submit }),
+        },
       );
-      if (!submit) setSaved(true);
+      onUpdate(updated);
+      if (!submit) {
+        setDraft(
+          updated.questions.find((item) => item.id === question.id)
+            ?.answer_text ?? draft,
+        );
+        setSaved(true);
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Your answer could not be saved.",
@@ -259,6 +284,12 @@ function AnswerEditor({
           {readable(question.category)} · {question.difficulty}
         </span>
       </div>
+      <p className="question-origin">
+        {question.source === "ai" ? "AI-assisted question" : "Curated question"}
+        {interview.ai_enabled && question.sequence > 1
+          ? " · Difficulty guided by answer detail; this is not a score."
+          : ""}
+      </p>
       <h2 tabIndex={-1} ref={heading}>
         {question.question_text}
       </h2>
@@ -317,7 +348,10 @@ function AnswerEditor({
               <ArrowRight size={16} aria-hidden="true" />
             )}
             {busy
-              ? "Saving your answer…"
+              ? interview.ai_enabled &&
+                question.sequence < interview.question_count
+                ? "Preparing next question…"
+                : "Saving your answer…"
               : question.sequence === interview.question_count
                 ? "Finish interview"
                 : "Save & next"}

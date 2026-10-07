@@ -1,8 +1,11 @@
-﻿import { ArrowRight, AudioLines } from "lucide-react";
+"use client";
+import { useAuth } from "../auth/auth-provider";
+import { ArrowRight, AudioLines } from "lucide-react";
 import { Container } from "../layout/container";
 import { ButtonLink } from "../ui/button";
 
 export function FinalCTA() {
+  const { user } = useAuth();
   return (
     <section className="cta-section" aria-labelledby="cta-title">
       <Container>
@@ -14,10 +17,10 @@ export function FinalCTA() {
           <h2 id="cta-title">Ready for your next interview?</h2>
           <p>
             Build confidence through consistent practice,
-            <br className="desktop-only" /> thoughtful feedback, and a clear
-            path to improvement.
+            <br className="desktop-only" /> focused questions, and a clear path
+            to improvement.
           </p>
-          <ButtonLink href="/register">
+          <ButtonLink href={user ? "/interviews/new" : "/register"}>
             Start Practicing <ArrowRight size={17} aria-hidden="true" />
           </ButtonLink>
           <div id="availability" className="availability-note" role="note">
@@ -25,7 +28,7 @@ export function FinalCTA() {
             <span>
               Create your account to begin your preparation.
               <br />
-              This foundation preview demonstrates the planned experience.
+              Detailed evaluation and analytics are still in development.
             </span>
           </div>
         </div>

@@ -2,7 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
 
@@ -16,7 +16,10 @@ class Settings(BaseSettings):
     database_url: SecretStr | None = None
     jwt_secret: SecretStr | None = None
     jwt_algorithm: Literal["HS256"] = "HS256"
-    access_token_expire_minutes: int = 30
+    access_token_expire_minutes: int = Field(default=30, ge=1, le=1440)
+    openai_api_key: SecretStr | None = None
+    openai_model: str = Field(default="gpt-5-mini", min_length=1, max_length=100)
+    ai_timeout_seconds: float = Field(default=15, ge=1, le=30)
     frontend_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3107"]
 
     model_config = SettingsConfigDict(

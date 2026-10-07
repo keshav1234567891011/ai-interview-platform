@@ -20,6 +20,7 @@ export type Question = {
   answered_at: string | null;
 };
 export type Interview = InterviewSummary & {
+  ai_enabled: boolean;
   focus_areas: string[];
   started_at: string | null;
   duration_seconds: number | null;

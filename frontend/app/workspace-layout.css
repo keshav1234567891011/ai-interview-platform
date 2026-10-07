@@ -5,6 +5,12 @@
   margin: auto;
   min-height: calc(100vh - 78px);
 }
+.header-user {
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .workspace-sidebar {
   min-width: 0;
   border-right: 1px solid var(--border);

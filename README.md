@@ -7,8 +7,9 @@ A technical interview preparation workspace for students and job candidates. The
 - **02 — Accounts:** PostgreSQL user persistence, Argon2 password hashing, JWT sessions, registration, login, logout, and protected account access.
 - **03 — Candidate workspace:** protected dashboard, real profile completion, normalized technical skills, profile editing, and safe account settings.
 - **04 — Resume and role context:** private PDF/DOCX uploads, deterministic skill extraction with editable results, job skill analysis, and baseline matching.
-- **05 ? Interviews:** role-aware question bank, persisted sessions and drafts, safe state transitions, and real interview history.
-- AI assistance follows in milestone 06. Detailed scoring is not implemented yet.
+- **05 - Interviews:** role-aware question bank, persisted sessions and drafts, safe state transitions, and real interview history.
+- **06 - AI assistance:** optional structured question generation, transparent adaptive difficulty, and automatic curated fallback.
+- Detailed scoring, evaluation, and progress analytics are not implemented yet.
 
 ## Stack and architecture
 
@@ -57,6 +58,10 @@ JWTs stay in an HttpOnly, SameSite=Lax cookie, never localStorage. Cookies are S
 
 JWT verification pins HS256, expiration, issuer, audience, and the user's session version. Logout revokes all existing account sessions. There is no refresh token; sign in again after expiry. Passwords use Argon2. Validation responses omit raw inputs; database errors remain generic. Auth attempts have a per-process limit; multiple production workers also require shared ingress throttling. Email verification and password reset are future work.
 
+## Optional AI assistance
+
+Set `OPENAI_API_KEY` only in ignored `backend/.env` to enable AI-assisted session setup. Keep it empty to use curated questions without an external AI service. `OPENAI_MODEL=gpt-5-mini` and `AI_TIMEOUT_SECONDS=15` are configurable. Candidates explicitly opt in before profile/resume/job context and recent answers are sent to OpenAI. Missing keys, timeouts, rate limits, and invalid output fall back automatically; the interview and submitted answers remain intact. Automated tests never need a paid request. See [AI privacy, adaptation limits, and provider decisions](docs/ai-interviewer.md).
+
 ## Checks
 
 Frontend, from `frontend/`:
@@ -90,4 +95,6 @@ Each milestone branch fast-forwards from latest `main` before coding. After chec
 
 **Never commit `.env` files, credentials, or uploaded personal documents.** Examples contain placeholders only. Environments, caches, browsers, and artifacts stay repository-local and ignored. Detailed evaluation is a later milestone.
 
-See [design tokens](docs/design-system.md), [foundation scope](docs/foundation.md), and [authentication decisions](docs/authentication.md).
+See [design tokens](docs/design-system.md), [foundation scope](docs/foundation.md), [authentication decisions](docs/authentication.md), [resume analysis](docs/resume-analysis.md), and [interview sessions](docs/interview-engine.md).
+
+See [milestones 02-06 verification and configuration limits](docs/milestones-02-06.md).

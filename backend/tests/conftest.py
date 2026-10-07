@@ -45,6 +45,7 @@ class ApiClient:
 @pytest.fixture
 def client(monkeypatch):
     monkeypatch.setenv("APP_ENV", "test")
+    monkeypatch.setenv("OPENAI_API_KEY", "")
     monkeypatch.setenv("JWT_SECRET", secrets.token_urlsafe(48))
     get_settings.cache_clear()
     engine = create_engine(

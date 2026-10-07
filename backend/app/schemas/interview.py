@@ -23,6 +23,7 @@ class InterviewCreate(BaseModel):
     difficulty: Difficulty = "Intermediate"
     focus_areas: list[str] = Field(default_factory=list, max_length=18)
     question_count: int = Field(default=5, ge=1, le=10)
+    ai_enabled: bool = False
 
     @field_validator("focus_areas")
     @classmethod
@@ -65,6 +66,7 @@ class QuestionResponse(BaseModel):
 
 
 class InterviewResponse(InterviewSummary):
+    ai_enabled: bool
     focus_areas: list[str]
     started_at: datetime | None
     duration_seconds: int | None

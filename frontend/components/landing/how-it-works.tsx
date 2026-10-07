@@ -26,7 +26,7 @@ const steps = [
   {
     icon: ClipboardCheck,
     title: "Review Your Feedback",
-    copy: "Leave with clarity on your strengths and next steps.",
+    copy: "Planned: clarity on your strengths and next steps through detailed evaluation.",
   },
 ];
 
@@ -43,8 +43,8 @@ export function HowItWorks() {
           eyebrow="A CLEAR PATH FORWARD"
           title="From preparation to confidence."
         >
-          Four simple steps. One more prepared you. This workflow is planned for
-          launch.
+          Build your context, choose your role, and practice. Detailed feedback
+          is the next step on our roadmap.
         </SectionHeading>
         <ol className="steps-grid">
           {steps.map(({ icon: Icon, title, copy }, index) => (

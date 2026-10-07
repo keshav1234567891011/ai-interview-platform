@@ -20,6 +20,9 @@ export const testProfile = {
 };
 
 export async function mockWorkspace(page: Page) {
+  await page.route("**/api/interviews/capabilities", (route) =>
+    route.fulfill({ json: { ai_available: false } }),
+  );
   await page.route("**/api/auth/me", (route) =>
     route.fulfill({ json: testUser }),
   );
