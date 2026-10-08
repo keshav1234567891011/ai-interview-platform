@@ -157,7 +157,7 @@ test("draft survives reload and answer progresses to real completion", async ({
     page.getByText("1 of 1 questions answered · 1m 0s."),
   ).toBeVisible();
   await expect(
-    page.getByText("Detailed evaluation will be added", { exact: false }),
+    page.getByRole("link", { name: "View results" }),
   ).toBeVisible();
   await expect(page.getByText("Overall score", { exact: false })).toHaveCount(
     0,

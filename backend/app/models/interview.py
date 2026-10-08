@@ -6,6 +6,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -68,6 +69,9 @@ class InterviewQuestion(Base):
     answer: Mapped["InterviewAnswer | None"] = relationship(
         cascade="all, delete-orphan", uselist=False, lazy="selectin"
     )
+    evaluation: Mapped["AnswerEvaluation | None"] = relationship(
+        cascade="all, delete-orphan", uselist=False, lazy="selectin"
+    )
 
 
 class InterviewAnswer(Base):
@@ -76,7 +80,29 @@ class InterviewAnswer(Base):
         Uuid, ForeignKey("interview_questions.id", ondelete="CASCADE"), primary_key=True
     )
     answer_text: Mapped[str] = mapped_column(Text)
+    input_mode: Mapped[str] = mapped_column(String(10), default="text", server_default="text")
+    recording_duration_seconds: Mapped[float | None] = mapped_column(Float)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
     answered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AnswerEvaluation(Base):
+    __tablename__ = "answer_evaluations"
+    __table_args__ = tuple(
+        CheckConstraint(f"{column} BETWEEN 0 AND 100", name=column)
+        for column in ("score", "technical_score", "reasoning_score", "communication_score")
+    )
+    question_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("interview_questions.id", ondelete="CASCADE"), primary_key=True
+    )
+    score: Mapped[int] = mapped_column(Integer)
+    technical_score: Mapped[int] = mapped_column(Integer)
+    reasoning_score: Mapped[int] = mapped_column(Integer)
+    communication_score: Mapped[int] = mapped_column(Integer)
+    source: Mapped[str] = mapped_column(String(20))
+    details: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )

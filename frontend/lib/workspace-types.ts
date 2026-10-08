@@ -22,4 +22,5 @@ export type Dashboard = {
   profile: Profile;
   recent_interviews: InterviewSummary[];
   interview_count: number;
+  latest_evaluation?: import("./evaluation-types").EvaluationSummary & { interview_id: string } | null;
 };

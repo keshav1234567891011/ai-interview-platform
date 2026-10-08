@@ -9,7 +9,7 @@ A technical interview preparation workspace for students and job candidates. The
 - **04 — Resume and role context:** private PDF/DOCX uploads, deterministic skill extraction with editable results, job skill analysis, and baseline matching.
 - **05 - Interviews:** role-aware question bank, persisted sessions and drafts, safe state transitions, and real interview history.
 - **06 - AI assistance:** optional structured question generation, transparent adaptive difficulty, and automatic curated fallback.
-- Detailed scoring, evaluation, and progress analytics are not implemented yet.
+- **07 — Evaluation and voice:** stored rubric-based feedback, private results, descriptive delivery signals, deliberate microphone recording, optional server/browser transcription, and always-available text answers.
 
 ## Stack and architecture
 
@@ -96,7 +96,7 @@ Integration tests use isolated in-memory SQLite databases. Migrations are round-
 
 Each milestone branch fast-forwards from latest `main` before coding. After checks and source/secret review, commit and push it, then fast-forward and push `main`. Never force push or rewrite published history. Preserve the repository-local GitHub identity; do not modify global Git configuration or add co-author trailers.
 
-**Never commit `.env` files, credentials, or uploaded personal documents.** Examples contain placeholders only. Environments, caches, browsers, and artifacts stay repository-local and ignored. Detailed evaluation is a later milestone.
+**Never commit `.env` files, credentials, or uploaded personal documents.** Examples contain placeholders only. Environments, caches, browsers, and artifacts stay repository-local and ignored.
 
 See [design tokens](docs/design-system.md), [foundation scope](docs/foundation.md), [authentication decisions](docs/authentication.md), [resume analysis](docs/resume-analysis.md), and [interview sessions](docs/interview-engine.md).
 

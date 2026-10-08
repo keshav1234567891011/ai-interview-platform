@@ -36,6 +36,8 @@ class InterviewCreate(BaseModel):
 class AnswerRequest(BaseModel):
     answer_text: str = Field(max_length=12000)
     submit: bool = True
+    input_mode: Literal["text", "voice"] = "text"
+    recording_duration_seconds: float | None = Field(default=None, gt=0, le=300)
 
     @field_validator("answer_text")
     @classmethod
@@ -63,6 +65,8 @@ class QuestionResponse(BaseModel):
     source: str
     answer_text: str
     answered_at: datetime | None
+    input_mode: str = "text"
+    recording_duration_seconds: float | None = None
 
 
 class InterviewResponse(InterviewSummary):

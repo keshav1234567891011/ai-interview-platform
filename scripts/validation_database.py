@@ -24,6 +24,8 @@ def main() -> None:
     if not re.fullmatch(r"interviewai-validation-[a-f0-9]{32}@example\.com", email):
         raise ValueError("Only generated validation accounts are permitted")
     engine = get_engine()
+    if engine.url.database != "ai_interview_db":
+        raise ValueError("Database boundary")
 
     @event.listens_for(engine, "do_connect")
     def bounded_connection(dialect, record, args, parameters):
@@ -51,14 +53,14 @@ def main() -> None:
                 assert profile.experience_level == "entry"
                 assert profile.summary == "Temporary browser validation of local persistence."
                 assert sorted(skill.id for skill in profile.skills) == ["postgresql", "python"]
-            elif action == "interview":
+            elif action in {"interview", "evaluation"}:
                 assert user is not None
                 interview = db.scalar(
                     select(Interview).where(
                         Interview.id == UUID(request["interview_id"]), Interview.user_id == user.id
                     )
                 )
-                assert interview is not None and interview.status == "in_progress"
+                assert interview is not None
                 assert not interview.ai_enabled and interview.question_count == 3
                 assert all(question.source == "question_bank" for question in interview.questions)
                 submitted = [
@@ -66,8 +68,12 @@ def main() -> None:
                     for question in interview.questions
                     if question.answer is not None and question.answer.answered_at is not None
                 ]
-                assert len(submitted) == 1
-                assert submitted[0].answer.answer_text == request["answer"]
+                if action == "interview":
+                    assert interview.status == "in_progress" and len(submitted) == 1
+                    assert submitted[0].answer.answer_text == request["answer"]
+                else:
+                    assert interview.status == "completed" and len(submitted) == 3
+                    assert all(question.evaluation and question.evaluation.source == "deterministic" for question in submitted)
             else:
                 raise ValueError("Unsupported validation operation")
             print(json.dumps({"passed": True}))

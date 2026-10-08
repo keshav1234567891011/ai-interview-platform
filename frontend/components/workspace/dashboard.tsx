@@ -46,19 +46,19 @@ export function Dashboard() {
           <p>Based on your name, role, experience, and skills.</p>
         </Card>
         <Card className="workspace-stat">
-          <span>Interview readiness</span>
+          <span>{data.latest_evaluation ? "Latest overall score" : "Interview readiness"}</span>
           <div className="stat-icon">
             <Target size={23} aria-hidden="true" />
           </div>
           <h2>
-            {profile.completion === 100
+            {data.latest_evaluation ? `${data.latest_evaluation.score}/100` : profile.completion === 100
               ? "Your foundation is ready"
               : "Start with your foundation"}
           </h2>
           <p>
-            Readiness scoring comes with evaluation. For now, make your profile
-            reflect your goals.
+            {data.latest_evaluation ? `Technical ${data.latest_evaluation.technical_score}/100 · Communication ${data.latest_evaluation.communication_score}/100` : "Complete a practice interview to see feedback based on your own answers."}
           </p>
+          {data.latest_evaluation && <Link className="text-link" href={`/interviews/${data.latest_evaluation.interview_id}/results`}>View your report</Link>}
         </Card>
         <Card className="workspace-stat">
           <span>Practice sessions</span>
@@ -128,18 +128,18 @@ export function Dashboard() {
         <div>
           <p className="eyebrow">YOUR RECOMMENDED NEXT STEP</p>
           <h2>
-            {profile.completion < 100
+            {data.latest_evaluation?.recommended_topics.length ? `Practice ${data.latest_evaluation.recommended_topics[0].replaceAll("-", " ")}.` : profile.completion < 100
               ? "Make your profile yours."
               : "Keep your goals up to date."}
           </h2>
           <p>
-            {profile.target_role
+            {data.latest_evaluation ? "Revisit the lowest scoring topic from your latest session, then explain it with a concrete example." : profile.target_role
               ? `You’re working toward ${profile.target_role}. Keep your skills and experience aligned with that goal.`
               : "Choose a target role and add your skills. A clearer starting point makes better practice possible."}
           </p>
         </div>
-        <ButtonLink href="/profile">
-          {profile.completion < 100 ? "Complete profile" : "Review profile"}
+        <ButtonLink href={data.latest_evaluation ? "/interviews/new" : "/profile"}>
+          {data.latest_evaluation ? "Practice again" : profile.completion < 100 ? "Complete profile" : "Review profile"}
           <ArrowRight size={16} aria-hidden="true" />
         </ButtonLink>
       </Card>

@@ -5,6 +5,7 @@ import "./workspace.css";
 import "./workspace-layout.css";
 import "./resume.css";
 import "./interviews.css";
+import "./reports.css";
 import { AuthProvider } from "@/components/auth/auth-provider";
 
 export const metadata: Metadata = {

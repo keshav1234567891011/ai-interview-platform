@@ -80,6 +80,10 @@ def session_response(interview: Interview) -> InterviewResponse:
                 source=q.source,
                 answer_text=q.answer.answer_text if q.answer else "",
                 answered_at=q.answer.answered_at if q.answer else None,
+                input_mode=q.answer.input_mode if q.answer else "text",
+                recording_duration_seconds=q.answer.recording_duration_seconds
+                if q.answer
+                else None,
             )
             for q in visible
         ],

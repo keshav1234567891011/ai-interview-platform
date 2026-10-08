@@ -145,6 +145,19 @@ test("real browser account, profile, logout, and curated interview persist in Po
     await expect(page.getByLabel("Your answer", { exact: true })).toHaveValue("");
     database("interview", { interview_id: interview.id, answer });
     passed();
+    stage = "completed interview and stored baseline results";
+    for (let index = 1; index < 3; index++) {
+      await page.getByLabel("Your answer", { exact: true }).fill("I define the concept, explain the approach because correctness matters, and use a practical example with a trade-off.");
+      await page.getByRole("button", { name: index === 2 ? "Finish interview" : "Save & next", exact: true }).click();
+      if (index === 1) await expect(page.getByRole("progressbar", { name: "Questions answered" })).toHaveAttribute("aria-valuenow", "2");
+    }
+    await page.getByRole("link", { name: "View results", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Your interview report." })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Communication Analysis" })).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Your interview report." })).toBeVisible();
+    database("evaluation", { interview_id: interview.id });
+    passed();
     stage = "final logout";
     await page.getByRole("button", { name: "Logout", exact: true }).click();
     await expect.poll(() => new URL(page.url()).pathname).toMatch(/^\/(login)?$/);

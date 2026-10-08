@@ -180,7 +180,7 @@ function SetupForm({
               </label>
               <p id="ai-privacy">
                 {aiAvailable
-                  ? "Optional. Your skills, summary, bounded resume/job excerpts, and recent answers will be sent to OpenAI to prepare questions. Curated questions remain the fallback."
+                  ? "Optional. Your skills, summary, bounded resume/job excerpts, and recent answers will be sent to OpenAI to prepare questions and concise evaluation feedback. Curated questions and baseline feedback remain the fallback."
                   : "Curated questions are ready to use. AI assistance becomes available when your server is configured."}
               </p>
             </div>
@@ -223,8 +223,8 @@ function SetupForm({
             </li>
           </ul>
           <p className="fine-note">
-            Detailed scoring and feedback will arrive in a later milestone. This
-            session focuses on your answers.
+            Complete the session to review concise technical feedback and
+            communication signals based on your answers.
           </p>
         </Card>
       </div>

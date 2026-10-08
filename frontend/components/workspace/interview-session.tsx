@@ -7,6 +7,7 @@ import { readable, type Interview, type Question } from "@/lib/interview-types";
 import { Card } from "../ui/card";
 import { Button, ButtonLink } from "../ui/button";
 import { WorkspaceState } from "../ui/workspace-state";
+import { VoiceAnswer } from "./voice-answer";
 
 export function InterviewSession({ id }: { id: string }) {
   const resource = useResource<Interview>(`/interviews/${id}`);
@@ -80,9 +81,9 @@ export function InterviewSession({ id }: { id: string }) {
             .
           </p>
           <p className="panel-copy">
-            Detailed evaluation will be added in a later milestone. Your answers
-            are saved.
+            Your answers are saved. Review feedback and choose what to practice next.
           </p>
+          {session.status === "completed" && <ButtonLink href={`/interviews/${id}/results`}>View results</ButtonLink>}
           <ButtonLink href="/interviews/new">
             Start another session <ArrowRight size={16} aria-hidden="true" />
           </ButtonLink>
@@ -149,7 +150,7 @@ export function InterviewSession({ id }: { id: string }) {
             )}
           </div>
           <Card className="workspace-panel session-guidance">
-            <p className="eyebrow">THINK OUT LOUD, IN WRITING</p>
+            <p className="eyebrow">MAKE YOUR THINKING CLEAR</p>
             <h2>Your reasoning matters.</h2>
             <p>
               State your approach. Explain why it works. Consider edge cases and
@@ -157,7 +158,7 @@ export function InterviewSession({ id }: { id: string }) {
             </p>
             <p className="fine-note">
               Save your draft before leaving. Submitted answers are final. This
-              session does not produce a score yet.
+              feedback is available after you complete the interview.
             </p>
             {confirmAbandon ? (
               <div
@@ -213,6 +214,9 @@ function AnswerEditor({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [mode, setMode] = useState<"text" | "voice">(question.input_mode ?? "text");
+  const [recording, setRecording] = useState(false);
+  const [duration, setDuration] = useState<number | null>(question.recording_duration_seconds ?? null);
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     heading.current?.focus();
@@ -257,7 +261,7 @@ function AnswerEditor({
         `/interviews/${interview.id}/questions/${question.id}/answer`,
         {
           method: "PUT",
-          body: JSON.stringify({ answer_text: draft, submit }),
+          body: JSON.stringify({ answer_text: draft, submit, input_mode: mode, recording_duration_seconds: mode === "voice" ? duration : null }),
         },
       );
       onUpdate(updated);
@@ -293,6 +297,11 @@ function AnswerEditor({
       <h2 tabIndex={-1} ref={heading}>
         {question.question_text}
       </h2>
+      <div className="answer-modes" role="group" aria-label="Answer input mode">
+        <Button type="button" variant={mode === "text" ? "secondary" : "ghost"} aria-pressed={mode === "text"} disabled={busy || recording} onClick={() => setMode("text")}>Answer with text</Button>
+        <Button type="button" variant={mode === "voice" ? "secondary" : "ghost"} aria-pressed={mode === "voice"} disabled={busy || recording} onClick={() => setMode("voice")}>Answer with microphone</Button>
+      </div>
+      {mode === "voice" && <VoiceAnswer path={`/interviews/${interview.id}/questions/${question.id}/transcribe`} onRecording={setRecording} onTranscript={(text, seconds) => { if (text) setDraft(text); setDuration(seconds > 0 ? seconds : null); setSaved(false); }} />}
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -309,7 +318,7 @@ function AnswerEditor({
               setDraft(event.target.value);
               setSaved(false);
             }}
-            disabled={busy}
+            disabled={busy || recording}
             maxLength={12000}
             placeholder="Start with your approach, then explain your reasoning…"
             aria-describedby="answer-hint"
@@ -341,7 +350,7 @@ function AnswerEditor({
             <Save size={15} aria-hidden="true" />
             Save draft
           </Button>
-          <Button type="submit" disabled={busy || !draft.trim()}>
+          <Button type="submit" disabled={busy || recording || !draft.trim()}>
             {busy ? (
               <LoaderCircle className="spin" size={16} aria-hidden="true" />
             ) : (

@@ -158,7 +158,10 @@ def test_invalid_structured_output_falls_back(client, account, result):
 
 def test_no_key_fallback_and_ai_opt_out(client, account):
     assert get_question_provider() is None
-    assert client.get("/api/interviews/capabilities").json() == {"ai_available": False}
+    assert client.get("/api/interviews/capabilities").json() == {
+        "ai_available": False,
+        "transcription_available": False,
+    }
     base = create_ai(client)
     assert client.post(f"{base}/start").json()["questions"][0]["source"] == "question_bank"
     spy = StubProvider(failure=AssertionError("Opt-out must not invoke provider"))

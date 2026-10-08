@@ -5,6 +5,7 @@ from app.api.dependencies import CurrentUser, DbSession
 from app.models.interview import Interview
 from app.models.profile import Skill, UserProfile
 from app.schemas.profile import ProfileResponse, ProfileUpdate, SkillResponse
+from app.services.evaluation import aggregate
 from app.services.interviews import summary
 from app.services.profile import profile_response
 
@@ -48,8 +49,17 @@ def dashboard(user: CurrentUser, db: DbSession):
     count = db.scalar(
         select(func.count()).select_from(Interview).where(Interview.user_id == user.id)
     )
+    latest = db.scalar(
+        select(Interview)
+        .where(Interview.user_id == user.id, Interview.status == "completed")
+        .order_by(Interview.completed_at.desc())
+        .limit(1)
+    )
     return {
         "profile": profile,
         "recent_interviews": [summary(item) for item in recent],
         "interview_count": count,
+        "latest_evaluation": {"interview_id": latest.id, **aggregate(latest)}
+        if latest and aggregate(latest)
+        else None,
     }

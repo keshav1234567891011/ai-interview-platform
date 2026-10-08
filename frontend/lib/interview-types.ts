@@ -18,6 +18,8 @@ export type Question = {
   source: string;
   answer_text: string;
   answered_at: string | null;
+  input_mode?: "text" | "voice";
+  recording_duration_seconds?: number | null;
 };
 export type Interview = InterviewSummary & {
   ai_enabled: boolean;
