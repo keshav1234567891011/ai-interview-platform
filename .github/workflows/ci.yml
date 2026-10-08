@@ -1,0 +1,58 @@
+name: InterviewAI validation
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: validation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.local/browsers
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --prefix frontend
+      - run: npm --prefix frontend run lint
+      - run: npm --prefix frontend run typecheck
+      - run: npm --prefix frontend run build
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npm --prefix frontend run test:e2e
+      - run: npm run test:dev-config
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      APP_ENV: test
+      OPENAI_API_KEY: ""
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: python -m venv .venv
+      - run: .venv/bin/pip install -r requirements-dev.txt
+      - run: .venv/bin/python -m ruff check app tests alembic
+      - run: .venv/bin/python -m ruff format --check app tests alembic
+      - run: .venv/bin/python -m pytest -q --basetemp=runtime/pytest-ci
+      - run: .venv/bin/python -m app.migration_check
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f backend/Dockerfile -t interviewai-backend:ci .
+      - run: docker build -f frontend/Dockerfile -t interviewai-frontend:ci .

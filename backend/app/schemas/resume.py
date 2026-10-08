@@ -18,6 +18,7 @@ class ResumeResponse(BaseModel):
 
 
 class ResumeSkillsUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     skill_ids: list[str] = Field(max_length=30)
 
     @field_validator("skill_ids")
@@ -29,6 +30,7 @@ class ResumeSkillsUpdate(BaseModel):
 
 
 class JobRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     description: str = Field(min_length=30, max_length=20000)
     resume_id: UUID | None = None
 

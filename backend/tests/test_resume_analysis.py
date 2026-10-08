@@ -4,10 +4,17 @@ from zipfile import ZipFile
 import pytest
 from docx import Document
 from fastapi import HTTPException
-from pypdf import PdfWriter
+from pypdf import PdfWriter, apply_configuration
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
-from app.services.resume_parser import DOCX_MIME, MAX_FILE_SIZE, extract_resume, validate_upload
+from app.services.resume_parser import (
+    DOCX_MIME,
+    MAX_FILE_SIZE,
+    MAX_PDF_STREAM,
+    PDF_LIMITS,
+    extract_resume,
+    validate_upload,
+)
 from app.services.skill_analysis import analyze_job, extract_skills, match_skills
 from app.services.storage import LocalResumeStorage, get_storage
 
@@ -20,6 +27,7 @@ def docx_bytes(text="Python SQL PostgreSQL Docker"):
     return data.getvalue()
 
 
+@apply_configuration(PDF_LIMITS)
 def pdf_bytes():
     writer = PdfWriter()
     page = writer.add_blank_page(width=300, height=300)
@@ -44,6 +52,21 @@ def pdf_bytes():
 def test_real_pdf_and_docx_parsers():
     assert "Python" in extract_resume(pdf_bytes(), "application/pdf")
     assert "PostgreSQL" in extract_resume(docx_bytes(), DOCX_MIME)
+
+
+def test_pdf_compression_limit_applies_before_expansion():
+    with apply_configuration(PDF_LIMITS):
+        writer = PdfWriter()
+        page = writer.add_blank_page(width=300, height=300)
+        stream = DecodedStreamObject()
+        stream.set_data(b" " * (MAX_PDF_STREAM + 1))
+        page[NameObject("/Contents")] = writer._add_object(stream.flate_encode())
+        buffer = BytesIO()
+        writer.write(buffer)
+    assert len(buffer.getvalue()) < MAX_FILE_SIZE
+    with pytest.raises(HTTPException) as error:
+        extract_resume(buffer.getvalue(), "application/pdf")
+    assert error.value.status_code == 422
 
 
 @pytest.mark.parametrize(

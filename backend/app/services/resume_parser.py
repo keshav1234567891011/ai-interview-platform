@@ -4,11 +4,42 @@ from zipfile import BadZipFile, ZipFile
 
 from docx import Document
 from fastapi import HTTPException
-from pypdf import PdfReader
+from pypdf import Configuration, PdfReader, apply_configuration
 
 MAX_FILE_SIZE = 5 * 1024 * 1024
 MAX_TEXT = 100_000
 DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+MAX_PDF_STREAM = 8 * 1024 * 1024
+PDF_LIMITS = Configuration(
+    maximum_declared_stream_length=MAX_PDF_STREAM,
+    array_based_stream_maximum_output_length=MAX_PDF_STREAM,
+    zlib_maximum_output_length=MAX_PDF_STREAM,
+    lzw_maximum_output_length=MAX_PDF_STREAM,
+    run_length_maximum_output_length=MAX_PDF_STREAM,
+    image_maximum_buffer_size=MAX_PDF_STREAM,
+    jbig2_maximum_output_length=MAX_PDF_STREAM,
+    jbig2dec_binary=None,  # Text parsing never searches for or launches an external image decoder.
+    page_tree_maximum_entries=1000,
+    page_tree_maximum_depth=30,
+    xform_maximum_invocations_per_extraction=300,
+)
+
+
+def extract_pdf(data: bytes) -> str:
+    # Context-local limits bound decompression before allocation; global settings stay unchanged.
+    with apply_configuration(PDF_LIMITS):
+        reader = PdfReader(BytesIO(data), strict=True)
+        if reader.is_encrypted or len(reader.pages) > 50:
+            raise ValueError("unsupported PDF")
+        sections = []
+        for page in reader.pages:
+            stream = page.get_contents()
+            if stream and len(stream.get_data()) > MAX_PDF_STREAM:
+                raise ValueError("PDF content too large")
+            sections.append(page.extract_text() or "")
+            if sum(map(len, sections)) > MAX_TEXT:
+                raise ValueError("too much text")
+        return "\n".join(sections)
 
 
 def validate_upload(filename: str, content_type: str | None, data: bytes) -> tuple[str, str]:
@@ -35,18 +66,7 @@ def validate_upload(filename: str, content_type: str | None, data: bytes) -> tup
 def extract_resume(data: bytes, content_type: str) -> str:
     try:
         if content_type == "application/pdf":
-            reader = PdfReader(BytesIO(data), strict=True)
-            if reader.is_encrypted or len(reader.pages) > 50:
-                raise ValueError("unsupported PDF")
-            sections = []
-            for page in reader.pages:
-                stream = page.get_contents()
-                if stream and len(stream.get_data()) > 8 * 1024 * 1024:
-                    raise ValueError("PDF content too large")
-                sections.append(page.extract_text() or "")
-                if sum(map(len, sections)) > MAX_TEXT:
-                    raise ValueError("too much text")
-            text = "\n".join(sections)
+            text = extract_pdf(data)
         else:
             with ZipFile(BytesIO(data)) as archive:
                 entries = archive.infolist()

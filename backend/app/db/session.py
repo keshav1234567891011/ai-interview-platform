@@ -18,7 +18,13 @@ def get_database_url() -> str:
 @lru_cache
 def get_engine() -> Engine:
     """Create the engine on demand; importing the app never connects to PostgreSQL."""
-    return create_engine(get_database_url(), pool_pre_ping=True, echo=False)
+    return create_engine(
+        get_database_url(),
+        pool_pre_ping=True,
+        echo=False,
+        connect_args={"connect_timeout": 5},
+        pool_timeout=5,
+    )
 
 
 def get_session() -> Iterator[Session]:

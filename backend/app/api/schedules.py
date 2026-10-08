@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 
 from app.api.dependencies import CurrentUser, DbSession
+from app.core.rate_limit import processing_budget
 from app.models.schedule import ScheduledInterview
 from app.schemas.interview import InterviewCreate, InterviewResponse
 from app.schemas.schedule import Reschedule, ScheduleCreate, ScheduleResponse
@@ -40,6 +41,7 @@ def listing(user: CurrentUser, db: DbSession):
 
 @router.post("", response_model=ScheduleResponse, status_code=201)
 def create(payload: ScheduleCreate, user: CurrentUser, db: DbSession):
+    processing_budget(db, user.id)
     schedule = ScheduledInterview(user_id=user.id, **payload.model_dump())
     db.add(schedule)
     db.commit()
@@ -74,6 +76,7 @@ def start(
     db: DbSession,
     provider: Annotated[QuestionProvider | None, Depends(get_question_provider)],
 ):
+    processing_budget(db, user.id)
     schedule = owned(db, user.id, id, lock=True)
     if schedule.status != "scheduled":
         raise HTTPException(409, "This schedule is already closed")

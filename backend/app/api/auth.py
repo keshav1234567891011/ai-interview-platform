@@ -1,40 +1,15 @@
-from collections import defaultdict, deque
-from threading import Lock
-from time import monotonic
-
 from fastapi import APIRouter, HTTPException, Request, Response
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.api.dependencies import CurrentUser, DbSession
 from app.core.config import get_settings
+from app.core.rate_limit import auth_budget
 from app.core.security import COOKIE_NAME, create_token, dummy_hash, password_hash, signing_key
 from app.models.user import User
 from app.schemas.auth import Credentials, RegisterRequest, UserResponse
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
-attempts: dict[str, deque[float]] = defaultdict(deque)
-attempt_lock = Lock()
-
-
-def limit_attempts(request: Request) -> None:
-    if get_settings().app_env == "test":
-        return
-    key = request.client.host if request.client else "unknown"
-    now = monotonic()
-    with attempt_lock:
-        for stale in [k for k, v in attempts.items() if not v or now - v[-1] > 60]:
-            del attempts[stale]
-        queue = attempts[key]
-        while queue and now - queue[0] > 60:
-            queue.popleft()
-        if len(queue) >= 10 or len(attempts) > 10000:
-            raise HTTPException(
-                429,
-                "Too many attempts. Please try again in a minute.",
-                headers={"Retry-After": "60"},
-            )
-        queue.append(now)
 
 
 def attach_session(response: Response, user: User) -> None:
@@ -52,7 +27,7 @@ def attach_session(response: Response, user: User) -> None:
 
 @router.post("/register", response_model=UserResponse, status_code=201)
 def register(payload: RegisterRequest, request: Request, response: Response, db: DbSession) -> User:
-    limit_attempts(request)
+    auth_budget(db, request, str(payload.email), registering=True)
     signing_key()
     user = User(
         email=str(payload.email),
@@ -72,7 +47,7 @@ def register(payload: RegisterRequest, request: Request, response: Response, db:
 
 @router.post("/login", response_model=UserResponse)
 def login(payload: Credentials, request: Request, response: Response, db: DbSession) -> User:
-    limit_attempts(request)
+    auth_budget(db, request, str(payload.email))
     signing_key()
     user = db.scalar(select(User).where(User.email == str(payload.email)))
     valid = password_hash.verify(

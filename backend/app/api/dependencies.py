@@ -18,7 +18,7 @@ def get_token(request: Request) -> str:
         if authorization.startswith("Bearer ")
         else request.cookies.get(COOKIE_NAME)
     )
-    if not token:
+    if not token or len(token) > 4096:
         raise HTTPException(
             401, "Please sign in to continue.", headers={"WWW-Authenticate": "Bearer"}
         )

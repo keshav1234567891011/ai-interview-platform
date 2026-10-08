@@ -1,3 +1,4 @@
+import logging
 import re
 
 from sqlalchemy import select
@@ -121,4 +122,5 @@ def prepare_question(
         target.source = "ai"
     except Exception:
         # Do not log provider exceptions: they can contain private prompts or transport headers.
+        logging.getLogger("interviewai").warning("question_provider_fallback")
         return

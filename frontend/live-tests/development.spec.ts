@@ -44,6 +44,7 @@ test("real browser account, profile, logout, and curated interview persist in Po
     expect(health.status()).toBe(200);
     expect(await health.json()).toEqual({ status: "ok" });
     expect((await page.request.get(`${backend}/docs`)).status()).toBe(200);
+    expect((await page.request.get(`${backend}/ready`)).status()).toBe(200);
     passed();
     stage = "landing and API proxy";
     await page.goto("/");
@@ -104,10 +105,30 @@ test("real browser account, profile, logout, and curated interview persist in Po
     await login();
     await page.goto("/resume");
     await expect(page.getByRole("heading", { name: "Give your preparation a starting point." })).toBeVisible();
+    stage = "synthetic resume upload and persistence";
+    const document = spawnSync(
+      path.join(root, "backend", ".venv", process.platform === "win32" ? "Scripts/python.exe" : "bin/python"),
+      ["-c", "from docx import Document; from io import BytesIO; import sys; d=Document(); d.add_paragraph('InterviewAI validation. Python PostgreSQL SQL Docker FastAPI.'); b=BytesIO(); d.save(b); sys.stdout.buffer.write(b.getvalue())"],
+      { cwd: path.join(root, "backend"), timeout: 10_000, windowsHide: true },
+    );
+    if (document.status !== 0) throw new Error("Synthetic validation document generation failed.");
+    await page.locator("#resume-file").setInputFiles({ name: "interviewai-validation.docx", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", buffer: document.stdout });
+    const upload = page.waitForResponse(r => r.url().endsWith("/api/resumes") && r.request().method() === "POST");
+    await page.getByRole("button", { name: "Upload resume", exact: true }).click();
+    expect((await upload).status()).toBe(201);
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "interviewai-validation.docx", exact: true })).toBeVisible();
+    await expect(page.getByRole("checkbox", { name: "Python", exact: true })).toBeChecked();
     passed();
     stage = "job analysis workspace";
     await page.goto("/jobs/analyze");
     await expect(page.getByRole("heading", { name: "Find your next focus." })).toBeVisible();
+    await page.getByLabel("Target job description").fill("Backend Developer. Required: Python, PostgreSQL, SQL and Docker. Preferred: FastAPI.");
+    const analysis = page.waitForResponse(r => r.url().endsWith("/api/jobs/analyze") && r.request().method() === "POST");
+    await page.getByRole("button", { name: "Analyze description", exact: true }).click();
+    const analyzed = await analysis;
+    expect(analyzed.status()).toBe(201);
+    expect((await analyzed.json()).candidate_source).toBe("resume");
     passed();
     stage = "interview setup";
     await page.goto("/interviews/new");

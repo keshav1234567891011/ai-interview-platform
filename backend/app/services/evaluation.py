@@ -1,6 +1,7 @@
 """Versioned, conservative rubric with an optional validated provider boundary."""
 
 import json
+import logging
 import re
 from typing import Protocol
 
@@ -159,7 +160,7 @@ def evaluate_answer(
             source = "ai"
         except Exception:
             # No provider payloads, transcript content or secrets in logs/errors.
-            pass
+            logging.getLogger("interviewai").warning("evaluation_provider_fallback")
     score = round(
         rubric.technical_score * 0.4
         + rubric.coverage_score * 0.25

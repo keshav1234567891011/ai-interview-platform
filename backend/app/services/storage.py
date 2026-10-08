@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Protocol
 from uuid import uuid4
 
-from app.core.config import BACKEND_ROOT
+from app.core.config import BACKEND_ROOT, get_settings
 
 
 class ResumeStorage(Protocol):
@@ -13,7 +13,7 @@ class ResumeStorage(Protocol):
 
 class LocalResumeStorage:
     def __init__(self, directory: Path | None = None):
-        self.directory = directory or BACKEND_ROOT / "runtime" / "uploads"
+        self.directory = directory or BACKEND_ROOT / get_settings().storage_directory
         if not self.directory.resolve().is_relative_to(BACKEND_ROOT.parent):
             raise ValueError("Storage must remain inside the repository")
 

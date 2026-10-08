@@ -1,6 +1,8 @@
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+FeedbackItem = Annotated[str, Field(min_length=1, max_length=500)]
 
 
 class RubricEvaluation(BaseModel):
@@ -12,9 +14,9 @@ class RubricEvaluation(BaseModel):
     reasoning_score: int = Field(ge=0, le=100)
     practical_score: int = Field(ge=0, le=100)
     communication_score: int = Field(ge=0, le=100)
-    strengths: list[str] = Field(max_length=6)
-    weaknesses: list[str] = Field(max_length=6)
-    concepts_missed: list[str] = Field(max_length=12)
+    strengths: list[FeedbackItem] = Field(max_length=6)
+    weaknesses: list[FeedbackItem] = Field(max_length=6)
+    concepts_missed: list[FeedbackItem] = Field(max_length=12)
     feedback: str = Field(min_length=10, max_length=1500)
     improvement_suggestion: str = Field(min_length=10, max_length=1500)
 

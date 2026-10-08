@@ -17,6 +17,7 @@ def main() -> None:
     from app.db.session import get_engine
     from app.models.interview import Interview
     from app.models.profile import UserProfile
+    from app.models.resume import Resume
     from app.models.user import User
 
     request = json.load(sys.stdin)
@@ -40,10 +41,26 @@ def main() -> None:
                     assert user.id == UUID(request["user_id"])
             action = request["action"]
             if action == "cleanup":
+                from app.core.rate_limit import bucket_key
+                from app.models.rate_limit import RateLimitBucket
+
+                keys = [bucket_key("login-email", email, 60)]
+                storage_keys = []
                 if user is not None:
+                    storage_keys = list(db.scalars(select(Resume.storage_key).where(Resume.user_id == user.id)))
+                    keys.extend(
+                        bucket_key(scope, str(user.id), seconds)
+                        for scope in ("interview-processing", "transcription")
+                        for seconds in (60, 86400)
+                    )
                     # Database FK cascades remove this user's profile/interview records only.
                     db.execute(delete(User).where(User.id == user.id, User.email == email))
-                    db.commit()
+                db.execute(delete(RateLimitBucket).where(RateLimitBucket.key.in_(keys)))
+                db.commit()
+                from app.services.storage import get_storage
+
+                for key in storage_keys:
+                    get_storage().delete(key)
                 assert db.scalar(select(User.id).where(User.email == email)) is None
             elif action == "profile":
                 assert user is not None and user.hashed_password.startswith("$argon2id$")

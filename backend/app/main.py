@@ -1,3 +1,4 @@
+import logging
 import tempfile
 
 from fastapi import FastAPI
@@ -15,6 +16,7 @@ from app.api.interviews import router as interviews_router
 from app.api.profile import router as profile_router
 from app.api.resumes import router as resumes_router
 from app.api.schedules import router as schedules_router
+from app.core.body_limit import BodyLimitMiddleware
 from app.core.config import BACKEND_ROOT, get_settings
 
 
@@ -26,7 +28,7 @@ def create_app() -> FastAPI:
         title="InterviewAI API",
         description=(
             "Technical interview practice with private profiles, resume skill analysis, "
-            "persisted sessions, and optional AI assistance. Detailed evaluation is planned."
+            "evaluated voice-or-text sessions, scheduling, analytics, and optional AI assistance."
         ),
         version="0.1.0",
     )
@@ -38,6 +40,7 @@ def create_app() -> FastAPI:
     application.include_router(schedules_router)
     application.include_router(analytics_router)
     application.include_router(admin_router)
+    application.add_middleware(BodyLimitMiddleware)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=get_settings().frontend_origins,
@@ -60,7 +63,14 @@ def create_app() -> FastAPI:
                 return JSONResponse(
                     {"detail": "Request origin could not be verified."}, status_code=403
                 )
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception:
+            # Catch before Uvicorn's error logger can render sensitive exception details.
+            logging.getLogger("interviewai").error("unexpected_request_failure")
+            response = JSONResponse(
+                {"detail": "The request could not be completed."}, status_code=500
+            )
         if request.url.path.startswith("/api/"):
             response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -80,6 +90,7 @@ def create_app() -> FastAPI:
 
     @application.exception_handler(SQLAlchemyError)
     async def database_error(request: Request, exc: SQLAlchemyError):
+        logging.getLogger("interviewai").warning("database_request_failed")
         return JSONResponse(
             {"detail": "The database is unavailable. Please try again later."}, status_code=503
         )

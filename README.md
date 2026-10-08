@@ -1,34 +1,53 @@
-# InterviewAI
+﻿# InterviewAI
 
-A technical interview preparation workspace for students and job candidates. The landing page contains clearly labeled demo dashboards; authenticated pages use real persisted account state.
+A technical interview practice platform for students and job candidates, with personalized context, voice or text answers, structured feedback and progress tracking. Milestones 01–09 are implemented; this repository is prepared for deployment but has not been externally deployed.
 
-## Current capabilities
+## What you can do
 
-- **02 — Accounts:** PostgreSQL user persistence, Argon2 password hashing, JWT sessions, registration, login, logout, and protected account access.
-- **03 — Candidate workspace:** protected dashboard, real profile completion, normalized technical skills, profile editing, and safe account settings.
-- **04 — Resume and role context:** private PDF/DOCX uploads, deterministic skill extraction with editable results, job skill analysis, and baseline matching.
-- **05 - Interviews:** role-aware question bank, persisted sessions and drafts, safe state transitions, and real interview history.
-- **06 - AI assistance:** optional structured question generation, transparent adaptive difficulty, and automatic curated fallback.
-- **07 — Evaluation and voice:** stored rubric-based feedback, private results, descriptive delivery signals, deliberate microphone recording, optional server/browser transcription, and always-available text answers.
-- **08 — Complete workspace:** timezone-aware scheduling, score history, real analytics, an optional procedural 3D interviewer, question speech, and role-protected administration.
+- Create an account, sign in securely and manage a candidate profile with normalized technical skills.
+- Upload a private PDF/DOCX resume, review extracted skills and compare them with a job description. Matching is a deterministic vocabulary baseline, not a hiring judgment; OCR is unsupported.
+- Practice role-specific interviews with recoverable backend drafts and curated questions. Optional AI assistance generates validated questions and adapts difficulty using transparent answer signals.
+- Answer with text or deliberately enable microphone recording, playback and transcription. Text remains available without microphone permission, speech support or an API key.
+- Review stored technical, reasoning and communication feedback, missed concepts and practical recommendations. No-key evaluation is clearly labeled as a conservative baseline estimate.
+- Schedule interviews in your local timezone, reschedule/cancel them and view real history and analytics. Empty accounts show empty states rather than fabricated statistics.
+- Optionally enable a lightweight procedural 3D interviewer and read questions aloud with browser speech. Static text/2D fallbacks preserve the entire interview experience.
+- Use a role-protected admin area to inspect safe account/profile/resume metadata and history, search accounts and manage explicitly safe account fields. Public users cannot promote themselves.
 
-See [evaluation and audio privacy](docs/evaluation-voice.md) and [scheduling, analytics and admin bootstrap](docs/scheduling-admin-analytics.md).
+The landing-page previews are labeled demonstrations. Authenticated dashboards and analytics use actual stored account/interview data. Detailed delivery metrics describe pace and fillers; the application does not infer personality, emotions, identity or truthfulness.
 
-## Stack and architecture
+## Stack
 
-Next.js App Router, React, strict TypeScript, Tailwind CSS, Geist, and Lucide power the frontend. FastAPI, Pydantic, SQLAlchemy 2.x, Alembic, and Psycopg power the PostgreSQL backend. Layout, UI, and feature components share semantic dark/light theme tokens.
+| Frontend | Backend | Data and operations |
+| --- | --- | --- |
+| Next.js App Router, React, strict TypeScript | FastAPI, Pydantic, Python | PostgreSQL, SQLAlchemy 2.x, Alembic |
+| Tailwind, Geist, Lucide, semantic dark/light themes | Argon2 password hashing, validated JWT sessions | Docker multi-stage builds, GitHub Actions |
+| Lazy Three.js and Recharts, Playwright/Axe | Optional server-only OpenAI, curated fallbacks | Shared PostgreSQL quotas, health/readiness checks |
 
-```text
-frontend/   Pages, components, API client, browser tests
-backend/    API, models, schemas, services, migrations, Python tests
-docs/       Design system and milestone documentation
-scripts/    Repository-local development orchestration
-config/     Shared local frontend/backend addresses
+```mermaid
+flowchart LR
+  Browser[Browser] --> Next[Next.js / API proxy]
+  Next --> API[FastAPI]
+  API --> DB[(PostgreSQL)]
+  API --> AI[Optional AI providers]
+  API --> Fallback[Curated questions / baseline evaluation]
+  Mic[Deliberate microphone action] --> Transcript[Reviewed transcript]
+  Transcript --> API
 ```
 
-## Setup
+## Repository
 
-Use Node.js 24 and Python 3.12+. Install missing runtimes and PostgreSQL manually. From the repository root in PowerShell:
+```text
+frontend/    App Router pages, shared components, browser tests
+backend/     API, schemas, models, services, migrations, isolated tests
+config/      One local development address configuration
+scripts/     Project-local dev launcher and guarded live validation helpers
+docs/        Architecture, security, deployment and milestone decisions
+.github/     CI validation; no external deployment automation
+```
+
+## Local setup
+
+Use Node.js 24, Python 3.14 and separately installed PostgreSQL. Install missing system runtimes manually. From the repository root in PowerShell:
 
 ```powershell
 npm --prefix frontend ci
@@ -36,73 +55,91 @@ python -m venv backend/.venv
 backend/.venv/Scripts/python.exe -m pip install -r backend/requirements-dev.txt
 ```
 
-Create `backend/.env` manually using `backend/.env.example` as the format. Set `DATABASE_URL` to your dedicated PostgreSQL database, and `JWT_SECRET` to a cryptographically random value of at least 32 bytes. Never paste secrets into chat or commit them. URL-encode special characters in database credentials. Placeholder values are not live credentials. `/health` works without a database; account endpoints require database and JWT configuration.
+Manually create ignored `backend/.env` using [backend/.env.example](backend/.env.example) as its format. Set your dedicated `DATABASE_URL` and a cryptographically random `JWT_SECRET` of at least 32 bytes. URL-encode special characters in database credentials. Never paste secrets into chat, print the file or commit it. `OPENAI_API_KEY` is optional; leave it empty for complete deterministic operation.
 
-Apply reviewed migrations from `backend/`:
+From `backend/`, apply reviewed migrations without deleting/recreating your database:
 
 ```powershell
 .venv/Scripts/python.exe -m alembic upgrade head
 ```
 
-## Development
-
-From the repository root:
+From the repository root, start the entire application:
 
 ```powershell
 npm run dev
 ```
 
-Starts the frontend with hot reload at `http://localhost:3000` and FastAPI at `http://127.0.0.1:8010`. The root launcher watches Python files under `backend/app` and restarts only its own Uvicorn child on edits, avoiding a stalled Windows reload worker. PostgreSQL runs separately on port 5432. Open API docs at `http://127.0.0.1:8010/docs`; `http://127.0.0.1:8010/health` returns `{"status":"ok"}`. Ctrl+C stops processes started by this shared command. A healthy existing InterviewAI service may be reused; reused processes are never terminated by the launcher.
+| Service | URL |
+| --- | --- |
+| Frontend | http://localhost:3000 |
+| Backend | http://127.0.0.1:8010 |
+| API docs | http://127.0.0.1:8010/docs |
+| Liveness | http://127.0.0.1:8010/health |
+| Database/JWT/migration readiness | http://127.0.0.1:8010/ready |
 
-Local addresses are defined once in `config/development.json`, shared by the root launcher, Next.js API proxy, backend development CORS defaults, and live browser validation. Next.js forwards browser `/api/*` requests to `http://127.0.0.1:8010`; the browser stays on the frontend origin. Configure `BACKEND_API_URL` in frontend deployments when the backend is elsewhere. No browser-exposed secret is needed. Keep `config/` alongside the backend/frontend when packaging this monorepo. Configure `FRONTEND_ORIGINS` as a JSON list of explicit origins for deployment; the development example permits `http://localhost:3000`. Backend listen ports do not change the permitted browser origin.
+PostgreSQL runs separately, normally on port 5432. The root launcher starts both services, provides frontend hot reload and restarts its own backend child on Python edits. It may reuse healthy existing InterviewAI services and stops only processes it started. Local addresses are centralized in `config/development.json`; no unknown port-8000 process needs inspection or termination.
 
-## Session security
+Browser `/api/*` calls use the existing Next.js proxy. Deployment `BACKEND_API_URL` is server-only and supplied **before frontend build**; changing it requires rebuilding. No browser-exposed credential or duplicate API URL configuration is needed.
 
-JWTs stay in an HttpOnly, SameSite=Lax cookie, never localStorage. Cookies are Secure in production. Browser writes require a custom header and an allowed Origin when supplied. Credentialed CORS uses explicit origins. Production requires HTTPS with frontend/backend routed under the same site.
+## AI, audio and session behavior
 
-JWT verification pins HS256, expiration, issuer, audience, and the user's session version. Logout revokes all existing account sessions. There is no refresh token; sign in again after expiry. Passwords use Argon2. Validation responses omit raw inputs; database errors remain generic. Auth attempts have a per-process limit; multiple production workers also require shared ingress throttling. Email verification and password reset are future work.
+AI-assisted interviews require candidate opt-in. Profile/resume/job excerpts and recent answers can then be sent to the configured provider. The server validates structured questions/evaluations and falls back on missing keys, invalid output, duplicates, timeouts and failures. Automated tests never make paid calls. Lightweight adaptation is an interview practice heuristic, not a final ability assessment.
 
-## Optional AI assistance
+Microphone access begins only after Start recording. Recording is visible, tracks stop when finished/hidden/unmounted, and temporary playback is discarded/revoked. Server transcription processes validated WAV audio in memory and closes it after processing; raw recordings are not permanently stored. Browser recognition availability and vendor processing vary. Saved transcripts, durations and feedback persist in PostgreSQL. Pause metrics are omitted when timing is unavailable.
 
-Set `OPENAI_API_KEY` only in ignored `backend/.env` to enable AI-assisted session setup. Keep it empty to use curated questions without an external AI service. `OPENAI_MODEL=gpt-5-mini` and `AI_TIMEOUT_SECONDS=15` are configurable. Candidates explicitly opt in before profile/resume/job context and recent answers are sent to OpenAI. Missing keys, timeouts, rate limits, and invalid output fall back automatically; the interview and submitted answers remain intact. Automated tests never need a paid request. See [AI privacy, adaptation limits, and provider decisions](docs/ai-interviewer.md).
+Sessions use HttpOnly, SameSite=Lax JWT cookies, never localStorage. Production cookies are Secure and require HTTPS. Expiry, issuer, audience, integer version and current active account/role are checked. Logout invalidates all account sessions. Writes require a custom header and allowed Origin; credentialed CORS has no wildcard. Shared database quotas protect authentication, interview/provider work and transcription across workers.
+
+## Admin bootstrap
+
+After registering the intended operator account, run the controlled CLI from `backend/` with the project-local Python:
+
+```text
+python -m app.cli grant-admin --email YOUR_ACCOUNT_EMAIL --confirm
+```
+
+It promotes only an existing active account and invalidates its sessions. Sign in again afterwards. Never bootstrap by hardcoding a password, accepting a role in public registration or granting every database owner an app role. See [scheduling, analytics and administration](docs/scheduling-admin-analytics.md).
 
 ## Checks
 
-Frontend, from `frontend/`:
+From `frontend/`:
 
 ```powershell
 npm run lint
 npm run typecheck
 npm run build
-$env:PLAYWRIGHT_BROWSERS_PATH="C:\Users\Asus\Project\ai-interview-platform\.local\browsers"
+$env:PLAYWRIGHT_BROWSERS_PATH = Join-Path (Split-Path (Get-Location).Path) '.local/browsers'
 npx playwright install chromium --no-shell
 npm run test:e2e
 ```
 
-Browser verification starts a production server on port 3107. Adjust the browser path to the absolute path inside your clone. UI tests mock HTTP responses; backend integration tests exercise real routes separately.
+Mocked browser tests start the production application on port 3107 and cover authenticated workflows, mobile/desktop layouts, light/dark themes, accessibility, microphone denial/unsupported behavior and 3D/speech fallbacks. Keep downloaded browsers inside the repository.
 
-For opt-in end-to-end validation against the running development stack and configured PostgreSQL, run `npm run test:live` from `frontend/` after `npm run dev`. It uses the repository-local Chromium installation, creates a clearly marked temporary account, verifies registration/login/profile persistence and curated interview progress, then deletes only that account and its dependent records. No OpenAI key or paid API call is required. Browser traces/screenshots are disabled for this test to avoid retaining authenticated state.
-
-Backend, from `backend/`:
+From `backend/`:
 
 ```powershell
-.venv/Scripts/python.exe -m pytest
-.venv/Scripts/python.exe -m ruff check app alembic tests
-.venv/Scripts/python.exe -m ruff format --check app alembic tests
+$env:TEMP = Join-Path (Get-Location).Path 'runtime/tmp'
+$env:TMP = $env:TEMP
+.venv/Scripts/python.exe -m pytest -q --basetemp=runtime/pytest-local
+.venv/Scripts/python.exe -m ruff check app tests alembic
+.venv/Scripts/python.exe -m ruff format --check app tests alembic
+.venv/Scripts/python.exe -m app.migration_check
 .venv/Scripts/python.exe -m pip check
-.venv/Scripts/python.exe -m alembic heads
 ```
 
-Integration tests use isolated in-memory SQLite databases. Migrations are round-trip tested and compared with ORM metadata, and PostgreSQL SQL is validated offline with `scripts/validate_migrations.py` from `backend/`. These checks do not claim live PostgreSQL connectivity. Run `npm run test:dev-config` at the root to validate shared development configuration.
+Migration validation checks SQLite upgrades/downgrades and metadata parity plus PostgreSQL offline SQL without a live secret. Isolated tests use in-memory SQLite and mocked provider/audio boundaries; these are separate from live PostgreSQL verification.
 
-## Git and security
+Run `npm run test:dev-config` at root. For deliberate browser validation against the running development application and configured PostgreSQL, run `npm run test:live` from `frontend/`. It creates a clearly marked temporary account, checks authentication/profile/interviews/results/scheduling/analytics/admin authorization, then deletes only that account and its dependent data. Trace/video/screenshot capture is disabled to avoid retaining authenticated state. No microphone hardware or paid call is required.
 
-Each milestone branch fast-forwards from latest `main` before coding. After checks and source/secret review, commit and push it, then fast-forward and push `main`. Never force push or rewrite published history. Preserve the repository-local GitHub identity; do not modify global Git configuration or add co-author trailers.
+## Deployment preparation
 
-**Never commit `.env` files, credentials, or uploaded personal documents.** Examples contain placeholders only. Environments, caches, browsers, and artifacts stay repository-local and ignored.
+See [deployment procedure](docs/deployment.md), [architecture](docs/architecture.md) and [security/privacy](docs/security.md) before public launch. Docker builds use repository-root context filtering, non-root runtimes and standalone frontend output. Compose runs application containers against separately provisioned PostgreSQL. CI validates source, mocked UI, migrations and image builds without deployment or paid AI calls.
 
-See [design tokens](docs/design-system.md), [foundation scope](docs/foundation.md), [authentication decisions](docs/authentication.md), [resume analysis](docs/resume-analysis.md), and [interview sessions](docs/interview-engine.md).
+Configure HTTPS, production origins and secrets, reviewed migrations, ingress throttling/resource limits, backups and retention/deletion procedures. Local/container resume storage needs a durable volume for one host; distributed production requires a `ResumeStorage` object-storage adapter. Container filesystems are not durable storage. Email verification, password reset and comprehensive audit/erasure flows remain future extensions and are not claimed as implemented.
 
-See [milestones 02-06 verification and configuration limits](docs/milestones-02-06.md).
+## Development and security
 
-See [current local development validation](docs/local-development.md) for the port repair and live PostgreSQL/browser verification.
+Milestone branches start from latest `main`; checks precede commits and normal pushes, followed by `--ff-only` into main. Never force push or rewrite published history. Preserve repository-local Git identity and avoid co-author trailers. **Never commit `.env`, credentials, user uploads, recordings or test databases.** Examples contain placeholders only; environments/caches/artifacts are ignored.
+
+Additional decisions: [design system](docs/design-system.md), [authentication](docs/authentication.md), [resume matching](docs/resume-analysis.md), [interview engine](docs/interview-engine.md), [AI fallback](docs/ai-interviewer.md), [voice and evaluation](docs/evaluation-voice.md), [local development](docs/local-development.md).
+
+See [milestones 07–09 verification and validation limits](docs/milestones-07-09.md) for the recorded checks.

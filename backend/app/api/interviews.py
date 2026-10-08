@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 from uuid import UUID
 
@@ -5,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy import select
 
 from app.api.dependencies import CurrentUser, DbSession
+from app.core.rate_limit import processing_budget
 from app.models.interview import Interview, InterviewAnswer
 from app.schemas.interview import (
     AnswerRequest,
@@ -60,6 +62,7 @@ def list_interviews(user: CurrentUser, db: DbSession):
 
 @router.post("", response_model=InterviewResponse, status_code=201)
 def create_interview(payload: InterviewCreate, user: CurrentUser, db: DbSession):
+    processing_budget(db, user.id)
     interview = build_interview(db, user.id, payload)
     db.commit()
     return session_response(interview)
@@ -72,6 +75,7 @@ def get_interview(interview_id: UUID, user: CurrentUser, db: DbSession):
 
 @router.post("/{interview_id}/start", response_model=InterviewResponse)
 def start_interview(interview_id: UUID, user: CurrentUser, db: DbSession, provider: Provider):
+    processing_budget(db, user.id)
     interview = owned_interview(db, user.id, interview_id, lock=True)
     if interview.status not in {"created", "in_progress"}:
         raise HTTPException(409, "This session is already closed")
@@ -93,6 +97,8 @@ def answer_question(
     provider: Provider,
     evaluator: Evaluator,
 ):
+    if payload.submit:
+        processing_budget(db, user.id)
     interview = owned_interview(db, user.id, interview_id, lock=True)
     if interview.status != "in_progress":
         raise HTTPException(409, "Only an active interview accepts answers")
@@ -155,7 +161,7 @@ def interview_results(interview_id: UUID, user: CurrentUser, db: DbSession):
 
 
 @router.post("/{interview_id}/questions/{question_id}/transcribe")
-async def transcribe_answer(
+def transcribe_answer(
     interview_id: UUID,
     question_id: UUID,
     file: UploadFile,
@@ -164,13 +170,15 @@ async def transcribe_answer(
     provider: Transcriber,
 ):
     try:
+        processing_budget(db, user.id, audio=True)
         interview = owned_interview(db, user.id, interview_id)
         current = next(
             (q for q in interview.questions if not q.answer or not q.answer.answered_at), None
         )
         if interview.status != "in_progress" or not current or current.id != question_id:
             raise HTTPException(409, "Record an answer for the current active question")
-        data = await file.read(MAX_AUDIO_BYTES + 1)
+        # FastAPI runs this synchronous handler in a worker, including database and provider I/O.
+        data = file.file.read(MAX_AUDIO_BYTES + 1)
         duration = validate_audio(data, file.filename or "", file.content_type or "")
         if provider is None:
             raise HTTPException(
@@ -179,20 +187,18 @@ async def transcribe_answer(
                 "Use browser transcription or enter your answer as text.",
             )
         try:
-            # Offload synchronous provider I/O; never block the ASGI event loop.
-            from starlette.concurrency import run_in_threadpool
-
-            text = await run_in_threadpool(provider.transcribe, data)
+            text = provider.transcribe(data)
             if not isinstance(text, str) or not 0 < len(text.strip()) <= 12000:
                 raise ValueError("Invalid transcript")
         except Exception:
+            logging.getLogger("interviewai").warning("transcription_provider_fallback")
             raise HTTPException(
                 503,
                 "Transcription is temporarily unavailable. Your text answer is still available.",
             ) from None
         return {"text": text.strip(), "duration_seconds": round(duration, 2)}
     finally:
-        await file.close()
+        file.file.close()
 
 
 @router.post("/{interview_id}/abandon", response_model=InterviewResponse)

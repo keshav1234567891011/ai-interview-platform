@@ -1,0 +1,33 @@
+# Production-like application containers. PostgreSQL is managed separately.
+# Supply secrets as environment variables; this file never loads backend/.env itself.
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      DATABASE_URL: ${DATABASE_URL:?Configure a PostgreSQL connection reachable from the container}
+      JWT_SECRET: ${JWT_SECRET:?Configure a random signing secret}
+      FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-["http://localhost:3000"]}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      STORAGE_DIRECTORY: runtime/uploads
+    volumes:
+      - resume_data:/app/backend/runtime/uploads
+    expose: ["8000"]
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        BACKEND_API_URL: http://backend:8000
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+volumes:
+  resume_data:

@@ -13,6 +13,7 @@ class SkillResponse(BaseModel):
 
 
 class ProfileUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     display_name: str = Field(min_length=2, max_length=80)
     target_role: str = Field(default="", max_length=80)
     experience_level: Literal["", "beginner", "entry", "mid", "senior"] = ""

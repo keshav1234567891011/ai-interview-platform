@@ -44,7 +44,7 @@ def create_token(user: User) -> str:
 
 def decode_token(token: str) -> dict:
     try:
-        return jwt.decode(
+        claims = jwt.decode(
             token,
             signing_key(),
             algorithms=[get_settings().jwt_algorithm],
@@ -52,5 +52,8 @@ def decode_token(token: str) -> dict:
             audience="interviewai-web",
             options={"require": ["sub", "ver", "iat", "exp"]},
         )
+        if type(claims["ver"]) is not int or claims["ver"] < 0:
+            raise jwt.InvalidTokenError("Invalid session version")
+        return claims
     except jwt.InvalidTokenError:
         raise HTTPException(401, "Session expired or invalid. Please sign in again.") from None

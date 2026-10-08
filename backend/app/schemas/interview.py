@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.skills import SKILL_IDS
 
@@ -19,6 +19,7 @@ Difficulty = Literal["Beginner", "Intermediate", "Advanced"]
 
 
 class InterviewCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     role: Role
     difficulty: Difficulty = "Intermediate"
     focus_areas: list[str] = Field(default_factory=list, max_length=18)
@@ -34,6 +35,7 @@ class InterviewCreate(BaseModel):
 
 
 class AnswerRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     answer_text: str = Field(max_length=12000)
     submit: bool = True
     input_mode: Literal["text", "voice"] = "text"
