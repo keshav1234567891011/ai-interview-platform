@@ -1,13 +1,12 @@
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-import pytest
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.cli import grant_admin
+from app.core.permissions import PERMISSIONS
 from app.models.schedule import ScheduledInterview
 from app.models.user import User
+from app.services.administration import assign_permissions
 
 
 def schedule(client, **overrides):
@@ -140,7 +139,9 @@ def test_admin_denial_and_public_role_escalation_prevention(client, account):
 
 def test_admin_safe_views_updates_and_no_role_editor(client, account):
     with Session(client.engine) as db:
-        db.get(User, UUID(account["id"])).role = "admin"
+        user = db.get(User, UUID(account["id"]))
+        user.role = "admin"
+        assign_permissions(user, list(PERMISSIONS))
         db.commit()
     other = client.post(
         "/api/auth/register",
@@ -157,7 +158,17 @@ def test_admin_safe_views_updates_and_no_role_editor(client, account):
     assert client.get("/api/admin").json()["total_users"] == 2
     assert len(client.get("/api/admin/users?search=Other").json()) == 1
     user = client.get(f"/api/admin/users/{other['id']}").json()
-    assert set(user["user"]) == {"id", "email", "display_name", "role", "is_active", "created_at"}
+    assert set(user["user"]) == {
+        "id",
+        "email",
+        "display_name",
+        "role",
+        "is_active",
+        "created_at",
+        "permissions",
+        "password_change_required",
+        "last_login_at",
+    }
     assert not any(
         term in str(user) for term in ["hashed_password", "storage_key", "token_version"]
     )
@@ -178,14 +189,3 @@ def test_admin_safe_views_updates_and_no_role_editor(client, account):
         assert target.role == "user" and target.token_version == 1
     assert client.get("/api/admin/users?search=%").json() == []
     assert client.put(path, json={"is_active": True}).status_code == 200
-
-
-def test_explicit_admin_bootstrap(client, account, monkeypatch):
-    monkeypatch.setattr("app.cli.get_engine", lambda: client.engine)
-    grant_admin("CANDIDATE@EXAMPLE.COM")
-    with Session(client.engine) as db:
-        user = db.scalar(select(User).where(User.id == UUID(account["id"])))
-        assert user.role == "admin" and user.token_version == 1
-    assert client.get("/api/auth/me").status_code == 401
-    with pytest.raises(ValueError):
-        grant_admin("missing@example.com")

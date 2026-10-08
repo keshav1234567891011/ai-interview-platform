@@ -25,7 +25,7 @@ def get_token(request: Request) -> str:
     return token
 
 
-def get_current_user(token: Annotated[str, Depends(get_token)], db: DbSession) -> User:
+def get_authenticated_user(token: Annotated[str, Depends(get_token)], db: DbSession) -> User:
     claims = decode_token(token)
     try:
         user_id = UUID(claims["sub"])
@@ -37,13 +37,42 @@ def get_current_user(token: Annotated[str, Depends(get_token)], db: DbSession) -
     return user
 
 
+AuthenticatedUser = Annotated[User, Depends(get_authenticated_user)]
+
+
+def get_current_user(user: AuthenticatedUser) -> User:
+    if user.password_change_required:
+        raise HTTPException(403, "Change your temporary password before continuing.")
+    return user
+
+
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
 def get_current_admin(user: CurrentUser) -> User:
-    if user.role != "admin":
+    if user.role not in {"admin", "owner"}:
         raise HTTPException(403, "Administrator access is required")
     return user
 
 
 CurrentAdmin = Annotated[User, Depends(get_current_admin)]
+
+
+def get_current_owner(user: CurrentUser) -> User:
+    if user.role != "owner":
+        raise HTTPException(403, "Owner access is required")
+    return user
+
+
+CurrentOwner = Annotated[User, Depends(get_current_owner)]
+
+
+def require_permission(*permissions: str):
+    from app.core.permissions import has_permission
+
+    def check(user: CurrentAdmin) -> User:
+        if not any(has_permission(user, permission) for permission in permissions):
+            raise HTTPException(403, "This action requires an assigned permission")
+        return user
+
+    return check

@@ -93,7 +93,10 @@ def main() -> None:
                     assert all(question.evaluation and question.evaluation.source == "deterministic" for question in submitted)
             elif action == "temporary-admin":
                 assert user is not None
+                from app.core.permissions import PERMISSIONS
+                from app.services.administration import assign_permissions
                 user.role = "admin"
+                assign_permissions(user, list(PERMISSIONS))
                 user.token_version += 1
                 db.commit()
             elif action == "temporary-schedule-due":

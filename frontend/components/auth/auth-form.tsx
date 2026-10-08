@@ -14,6 +14,7 @@ import { useAuth } from "./auth-provider";
 import { Brand } from "../layout/brand";
 import { ThemeToggle } from "../layout/theme-toggle";
 import { Button } from "../ui/button";
+import { accountDestination } from "@/lib/auth-destination";
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const register = mode === "register";
@@ -39,14 +40,15 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       return;
     }
     try {
-      await authenticate(mode, data);
+      const user = await authenticate(mode, data);
       const next =
         new URLSearchParams(window.location.search).get("next") ?? "/dashboard";
       router.replace(
-        /^\/(dashboard|profile|resume|jobs|interviews)(\/|$)/.test(next) &&
+        !user.password_change_required && user.role === "user" &&
+        /^\/(dashboard|profile|resume|jobs|interviews|analytics)(\/|$)/.test(next) &&
           !next.includes("\\")
           ? next
-          : "/dashboard",
+          : accountDestination(user),
       );
     } catch (err) {
       setError(

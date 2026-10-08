@@ -11,6 +11,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loading && !user && !error)
       router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+    if (!loading && user?.password_change_required && pathname !== "/change-password")
+      router.replace("/change-password");
   }, [loading, user, error, router, pathname]);
   if (loading)
     return (
@@ -34,7 +36,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         <Button onClick={() => void refresh()}>Try again</Button>
       </div>
     );
-  return user ? (
+  return user && (!user.password_change_required || pathname === "/change-password") ? (
     children
   ) : (
     <div className="workspace-loading" role="status">

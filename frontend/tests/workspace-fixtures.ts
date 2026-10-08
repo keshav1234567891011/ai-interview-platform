@@ -5,6 +5,9 @@ export const testUser = {
   email: "candidate@example.com",
   is_active: true,
   role: "user",
+  password_change_required: false,
+  permissions: [] as string[],
+  last_login_at: null,
   created_at: "2026-01-01T00:00:00Z",
 };
 export const testSkills = [

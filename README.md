@@ -1,6 +1,6 @@
-﻿# InterviewAI
+# InterviewAI
 
-A technical interview practice platform for students and job candidates, with personalized context, voice or text answers, structured feedback and progress tracking. Milestones 01–09 are implemented; this repository is prepared for deployment but has not been externally deployed.
+A technical interview practice platform for students and job candidates, with personalized context, voice or text answers, structured feedback and progress tracking. Milestones 01–10 are implemented; this repository is prepared for deployment but has not been externally deployed.
 
 ## What you can do
 
@@ -89,15 +89,19 @@ Microphone access begins only after Start recording. Recording is visible, track
 
 Sessions use HttpOnly, SameSite=Lax JWT cookies, never localStorage. Production cookies are Secure and require HTTPS. Expiry, issuer, audience, integer version and current active account/role are checked. Logout invalidates all account sessions. Writes require a custom header and allowed Origin; credentialed CORS has no wildcard. Shared database quotas protect authentication, interview/provider work and transcription across workers.
 
-## Admin bootstrap
+## Owner bootstrap and delegated administration
 
-After registering the intended operator account, run the controlled CLI from `backend/` with the project-local Python:
+Configure `OWNER_BOOTSTRAP_EMAIL` and a private temporary `OWNER_BOOTSTRAP_PASSWORD` in ignored `backend/.env`. After applying migrations, run from `backend/`:
 
-```text
-python -m app.cli grant-admin --email YOUR_ACCOUNT_EMAIL --confirm
+```powershell
+.venv/Scripts/python.exe -m app.cli bootstrap-owner
 ```
 
-It promotes only an existing active account and invalidates its sessions. Sign in again afterwards. Never bootstrap by hardcoding a password, accepting a role in public registration or granting every database owner an app role. See [scheduling, analytics and administration](docs/scheduling-admin-analytics.md).
+Bootstrap creates/promotes only the configured account, enforces one active owner and is idempotent without resetting an existing password. First login opens `/change-password`; normal APIs remain blocked until the owner chooses a new password. Remove the bootstrap password from the environment after setup. No real password belongs in source, documentation, tests or CLI arguments.
+
+The owner uses `/owner/admins` to create/promote separate admins, assign granular permissions, activate/deactivate, reset temporary passwords and revoke delegation. New/reset admins must change their password too. Only the owner can manage admins; max-permission admins cannot modify the owner or access owner AI/security settings. Safe account APIs never return hashes or tokens. All successful privileged changes produce safe audit events. AI keys remain environment-managed; owner-only status exposes no key.
+
+See [owner control center and permission boundaries](docs/owner-control-center.md). Existing admins receive no automatic permissions during migration; the owner reviews their access explicitly.
 
 ## Checks
 
@@ -134,7 +138,7 @@ Run `npm run test:dev-config` at root. For deliberate browser validation against
 
 See [deployment procedure](docs/deployment.md), [architecture](docs/architecture.md) and [security/privacy](docs/security.md) before public launch. Docker builds use repository-root context filtering, non-root runtimes and standalone frontend output. Compose runs application containers against separately provisioned PostgreSQL. CI validates source, mocked UI, migrations and image builds without deployment or paid AI calls.
 
-Configure HTTPS, production origins and secrets, reviewed migrations, ingress throttling/resource limits, backups and retention/deletion procedures. Local/container resume storage needs a durable volume for one host; distributed production requires a `ResumeStorage` object-storage adapter. Container filesystems are not durable storage. Email verification, password reset and comprehensive audit/erasure flows remain future extensions and are not claimed as implemented.
+Configure HTTPS, production origins and secrets, reviewed migrations, ingress throttling/resource limits, backups and retention/deletion procedures. Local/container resume storage needs a durable volume for one host; distributed production requires a `ResumeStorage` object-storage adapter. Container filesystems are not durable storage. Email verification, public email-based password recovery and comprehensive retention/erasure workflows remain future extensions and are not claimed as implemented.
 
 ## Development and security
 

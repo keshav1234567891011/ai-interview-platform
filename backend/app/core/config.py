@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     app_env: Literal["development", "test", "production"] = "development"
     database_url: SecretStr | None = None
     jwt_secret: SecretStr | None = None
+    owner_bootstrap_email: str | None = None
+    owner_bootstrap_password: SecretStr | None = None
     jwt_algorithm: Literal["HS256"] = "HS256"
     access_token_expire_minutes: int = Field(default=30, ge=1, le=1440)
     openai_api_key: SecretStr | None = None

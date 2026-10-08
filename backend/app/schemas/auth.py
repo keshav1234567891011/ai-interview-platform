@@ -2,7 +2,15 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    SecretStr,
+    field_validator,
+    model_validator,
+)
 
 
 class Credentials(BaseModel):
@@ -54,5 +62,31 @@ class UserResponse(BaseModel):
     email: str
     display_name: str
     is_active: bool
-    role: Literal["user", "admin"]
+    role: Literal["user", "admin", "owner"]
+    password_change_required: bool
+    permissions: list[str]
+    last_login_at: datetime | None
     created_at: datetime
+
+
+class ChangePasswordRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    current_password: SecretStr
+    new_password: SecretStr
+    confirm_password: SecretStr
+
+    @field_validator("current_password", "new_password", "confirm_password")
+    @classmethod
+    def bounded(cls, value):
+        return Credentials.limit_password(value)
+
+    @field_validator("new_password")
+    @classmethod
+    def strong(cls, value):
+        return RegisterRequest.strong_password(value)
+
+    @model_validator(mode="after")
+    def matching(self):
+        if self.new_password.get_secret_value() != self.confirm_password.get_secret_value():
+            raise ValueError("New password and confirmation must match")
+        return self

@@ -13,6 +13,7 @@ from app.api.analytics import router as analytics_router
 from app.api.auth import router as auth_router
 from app.api.health import router as health_router
 from app.api.interviews import router as interviews_router
+from app.api.owner import router as owner_router
 from app.api.profile import router as profile_router
 from app.api.resumes import router as resumes_router
 from app.api.schedules import router as schedules_router
@@ -40,6 +41,7 @@ def create_app() -> FastAPI:
     application.include_router(schedules_router)
     application.include_router(analytics_router)
     application.include_router(admin_router)
+    application.include_router(owner_router)
     application.add_middleware(BodyLimitMiddleware)
     application.add_middleware(
         CORSMiddleware,

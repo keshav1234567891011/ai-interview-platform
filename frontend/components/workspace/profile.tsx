@@ -6,7 +6,7 @@ import { useResource } from "@/lib/use-resource";
 import type { Profile as ProfileData, Skill } from "@/lib/workspace-types";
 import { useAuth } from "../auth/auth-provider";
 import { Card } from "../ui/card";
-import { Button } from "../ui/button";
+import { Button, ButtonLink } from "../ui/button";
 import { WorkspaceState } from "../ui/workspace-state";
 
 export function Profile() {
@@ -33,12 +33,16 @@ export function Profile() {
   return <ProfileEditor initial={profile.data} skills={skills.data} />;
 }
 
-function ProfileEditor({
+export function ProfileEditor({
   initial,
   skills,
+  endpoint = "/profile",
+  managed = false,
 }: {
   initial: ProfileData;
   skills: Skill[];
+  endpoint?: string;
+  managed?: boolean;
 }) {
   const [selected, setSelected] = useState(
     initial.skills.map((skill) => skill.id),
@@ -56,7 +60,7 @@ function ProfileEditor({
       new FormData(event.currentTarget).entries(),
     );
     try {
-      await api<ProfileData>("/profile", {
+      await api<ProfileData>(endpoint, {
         method: "PUT",
         body: JSON.stringify({ ...fields, skill_ids: selected }),
       });
@@ -75,7 +79,7 @@ function ProfileEditor({
       <div className="workspace-heading">
         <div>
           <p className="eyebrow">PREPARATION, PERSONALIZED</p>
-          <h1>Your profile. Your direction.</h1>
+          <h1>{managed ? "Candidate profile." : "Your profile. Your direction."}</h1>
           <p>A little context makes your practice more meaningful.</p>
         </div>
       </div>
@@ -180,7 +184,7 @@ function ProfileEditor({
             ))}
           </fieldset>
         </Card>
-        <Card
+        {!managed && <Card
           id="account-settings"
           className="workspace-panel account-settings"
         >
@@ -192,8 +196,9 @@ function ProfileEditor({
               Your email is your sign-in identifier. Email changes and password
               recovery will come in a later milestone.
             </small>
+            <div style={{ marginTop: 12 }}><ButtonLink variant="secondary" href="/change-password">Change password</ButtonLink></div>
           </div>
-        </Card>
+        </Card>}
         {error && (
           <div className="form-error" role="alert">
             {error}

@@ -8,7 +8,7 @@ This is a deployment baseline, not a claim of an independent penetration test. A
 - JWT validation pins HS256, issuer, audience, expiry and required claims. Session versions must be nonnegative integers; oversized tokens are rejected. Every protected request checks current activation, version and role in the database.
 - JWT cookies are HttpOnly, SameSite=Lax and Secure in `APP_ENV=production`. They are restricted to `/api`; the browser does not store them in localStorage. Logout revokes all sessions for that account. There is no refresh-token mechanism.
 - Browser writes require `X-InterviewAI-Request: 1` and an explicitly allowed Origin when supplied. Credentialed CORS rejects wildcard origins. Deploy the frontend and API proxy on the same HTTPS origin.
-- Registration cannot set roles. Request DTOs forbid undeclared fields; profile/admin updates assign only explicitly safe attributes. Users cannot grant themselves admin. Admin web edits cannot deactivate admin accounts; operator role management is deliberate and separate.
+- Registration cannot set roles. Request DTOs forbid undeclared fields; profile/admin updates assign only explicitly safe attributes. Users cannot grant themselves admin. Candidate management cannot edit privileged accounts. Only the owner delegates admins and permissions; a unique partial index protects the single active owner. Temporary-password accounts must change password before normal API access. Password changes/resets invalidate previous sessions. See [owner controls](owner-control-center.md).
 
 ## Abuse controls
 

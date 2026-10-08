@@ -8,6 +8,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { ButtonLink } from "../ui/button";
 import { useAuth } from "../auth/auth-provider";
 import { useRouter, usePathname } from "next/navigation";
+import { accountDestination } from "@/lib/auth-destination";
 
 const links = [
   { label: "Features", href: "#features" },
@@ -66,7 +67,7 @@ export function Header() {
           <ThemeToggle />
           <a
             className="sign-in desktop-only"
-            href={user ? "/dashboard" : "/login"}
+            href={user ? accountDestination(user) : "/login"}
           >
             {user ? "Dashboard" : "Sign In"}
           </a>
@@ -74,7 +75,7 @@ export function Header() {
             <>
               <a
                 className="sign-in desktop-only header-user"
-                href="/profile"
+                href={user.role === "owner" ? "/owner/security" : user.password_change_required ? "/change-password" : "/profile"}
                 aria-label={`Profile for ${user.display_name}`}
               >
                 {user.display_name}
@@ -122,12 +123,12 @@ export function Header() {
             {link.label}
           </a>
         ))}
-        <a href={user ? "/dashboard" : "/login"} onClick={() => setOpen(false)}>
+        <a href={user ? accountDestination(user) : "/login"} onClick={() => setOpen(false)}>
           {user ? "Dashboard" : "Sign In"}
         </a>
         {user ? (
           <>
-            <a href="/profile" onClick={() => setOpen(false)}>
+            <a href={user.role === "owner" ? "/owner/security" : user.password_change_required ? "/change-password" : "/profile"} onClick={() => setOpen(false)}>
               Profile
             </a>
             <button

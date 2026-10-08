@@ -28,7 +28,11 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
     { href: "/jobs/analyze", label: "Job analysis", icon: Search },
     { href: "/profile", label: "Profile & settings", icon: UserRound },
   ];
-  if (user?.role === "admin") links.push({ href: "/admin", label: "Administration", icon: ShieldCheck });
+  if (user?.role === "admin" || user?.role === "owner") links.push({ href: "/admin", label: "Administration", icon: ShieldCheck });
+  if (user?.role === "owner") {
+    links.unshift({ href: "/owner", label: "Owner overview", icon: ShieldCheck });
+    links.push({ href: "/owner/admins", label: "Delegated admins", icon: UserRound }, { href: "/owner/security", label: "Account & security", icon: ShieldCheck });
+  }
   return (
     <div className="workspace-shell">
       <aside className="workspace-sidebar">
@@ -57,11 +61,11 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
             in your own space.
           </p>
         </div>
-        <Link className="workspace-user" href="/profile">
+        <Link className="workspace-user" href={user?.role === "owner" ? "/owner/security" : "/profile"}>
           <span>{user?.display_name.slice(0, 1).toUpperCase()}</span>
           <div>
             <strong>{user?.display_name}</strong>
-            <small>Candidate account</small>
+            <small>{user?.role === "owner" ? "Application owner" : user?.role === "admin" ? "Delegated administrator" : "Candidate account"}</small>
           </div>
           <ArrowUpRight size={14} aria-hidden="true" />
         </Link>

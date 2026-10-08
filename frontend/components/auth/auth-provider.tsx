@@ -13,7 +13,10 @@ export type User = {
   email: string;
   display_name: string;
   is_active: boolean;
-  role: "user" | "admin";
+  role: "user" | "admin" | "owner";
+  password_change_required: boolean;
+  permissions: string[];
+  last_login_at: string | null;
   created_at: string;
 };
 type AuthState = {
@@ -24,7 +27,7 @@ type AuthState = {
   authenticate: (
     kind: "login" | "register",
     data: Record<string, string>,
-  ) => Promise<void>;
+  ) => Promise<User>;
   logout: () => Promise<void>;
 };
 const AuthContext = createContext<AuthState | null>(null);
@@ -94,6 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(current);
     setError("");
     setLoading(false);
+    return current;
   }
   async function logout() {
     try {

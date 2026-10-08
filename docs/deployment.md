@@ -82,3 +82,6 @@ The named `resume_data` volume persists single-host files. Back it up; do not re
 ## CI
 
 `.github/workflows/ci.yml` validates lint, TypeScript, mocked Chromium UI tests, production build, backend tests/Ruff, SQLite migration round trips/PostgreSQL offline SQL, root development configuration and both image builds. It does not deploy or publish images, needs no OpenAI key and does not connect to a production database. Browser system dependencies are installed only in the ephemeral GitHub runner. The workflow's actual remote result must be checked on GitHub after pushing; creating it is not evidence that its hosted run passed.
+## Owner setup
+
+After reviewed migration upgrade, configure `OWNER_BOOTSTRAP_EMAIL` and a private temporary `OWNER_BOOTSTRAP_PASSWORD` in the backend environment and run `python -m app.cli bootstrap-owner` using the backend environment/container. The command is idempotent and refuses a different existing owner. Sign in through HTTPS and perform the mandatory first password change, then remove the bootstrap password from deployment configuration. Do not automatically run bootstrap with a newly generated password on every deployment. Existing administrator permissions must be explicitly reviewed and assigned by the owner. See [owner security and delegation](owner-control-center.md).

@@ -246,3 +246,18 @@
     animation: none;
   }
 }
+.security-workspace { max-width: 680px; margin: 48px auto; }
+.owner-action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.admin-account-list { display: grid; gap: 20px; }
+.permission-grid { display: grid; gap: 18px; }
+.permission-grid fieldset { border: 1px solid var(--border); border-radius: 12px; padding: 16px; min-width: 0; }
+.permission-grid legend { color: var(--foreground); font-size: .85rem; font-weight: 600; padding: 0 6px; }
+.permission-grid label { display: flex; gap: 10px; align-items: center; font-size: .9rem; padding: 7px 0; }
+.permission-grid input { accent-color: var(--primary); }
+.admin-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.admin-edit-panel { padding-top: 24px; margin-top: 24px; border-top: 1px solid var(--border); }
+.admin-edit-panel .permission-grid { margin-bottom: 20px; }
+.audit-list .topic-row { flex-wrap: wrap; gap: 10px; }
+.audit-list small { overflow-wrap: anywhere; }
+.success-message { color: var(--success); padding: 12px 0; }
+@media (max-width: 700px) { .owner-action-grid { grid-template-columns: 1fr; } .security-workspace { margin: 32px auto; } .admin-actions .button { flex: 1 1 160px; } }

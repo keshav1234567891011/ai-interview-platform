@@ -35,7 +35,7 @@ test("real browser account, profile, logout, and curated interview persist in Po
     const response = page.waitForResponse(r => r.url().endsWith("/api/auth/login") && r.request().method() === "POST");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     expect((await response).status()).toBe(200);
-    await expect(page).toHaveURL(/\/dashboard$/);
+    await expect(page).toHaveURL(/\/(dashboard|admin)$/);
     await expect(page.locator(".workspace-heading h1")).toBeVisible();
   }
   try {

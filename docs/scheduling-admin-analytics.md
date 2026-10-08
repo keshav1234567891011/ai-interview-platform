@@ -6,14 +6,8 @@ Analytics use persisted evaluations from completed interviews. Interview average
 
 The stylized procedural avatar is an optional interface enhancement, not a person. Three.js loads only after Enable 3D interviewer. Reduced motion and limited-resource devices use the static illustration; unavailable/lost WebGL also falls back. Browser speech synthesis begins only after Read question aloud and can be muted or replayed. Recording cancels question speech. Question text and answer controls work independently of all enhancements.
 
-Public registrations always create the `user` role. Authentication reads the current role from the database; clients cannot assign it through registration, profile updates or admin safe-field updates. Admin endpoints require `admin` independently of frontend navigation. Administrators see account/profile data, resume metadata, scheduled interviews and score history, not passwords, tokens, resume text, storage keys or candidate answer reports.
+Public registrations always create the `user` role. Authentication reads current role and delegated permissions from the database; clients cannot assign them through registration, profile or safe-field updates. The owner controls administrator creation, promotion and granular permissions through the owner-only control center. Administrators see only explicitly permitted safe account/profile, resume metadata and interview history, never passwords, tokens, raw resume text, storage keys or candidate answer reports. Privileged accounts cannot be edited through candidate management.
 
-An operator can explicitly grant an existing active account the admin role from `backend/`:
-
-```powershell
-.\.venv\Scripts\python.exe -m app.cli grant-admin --email YOUR_ACCOUNT_EMAIL --confirm
-```
-
-Use the project-local environment. No password is supplied or printed. This action invalidates old sessions; sign in again. The web UI permits only display-name and activation changes. Deactivation invalidates sessions, and admin accounts cannot be deactivated there. Do not promote users unless you deliberately intend to give them access to other candidates’ account metadata.
+The former `grant-admin` CLI is replaced by idempotent `bootstrap-owner`, temporary-password first-login enforcement, and owner-only delegation. See [owner bootstrap and permission reference](owner-control-center.md).
 
 Automated tests isolate persistence, mock browser/provider capabilities and require no real microphone or paid AI calls.

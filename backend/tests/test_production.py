@@ -116,7 +116,15 @@ def test_ready_requires_migrations_and_safe_failure(client, monkeypatch):
         connection.execute(text("INSERT INTO alembic_version VALUES ('0007')"))
     assert client.get("/ready").status_code == 503
     with client.engine.begin() as connection:
-        connection.execute(text("UPDATE alembic_version SET version_num = '0008'"))
+        from alembic.config import Config
+        from alembic.script import ScriptDirectory
+
+        from app.core.config import BACKEND_ROOT
+
+        head = ScriptDirectory.from_config(
+            Config(str(BACKEND_ROOT / "alembic.ini"))
+        ).get_current_head()
+        connection.execute(text("UPDATE alembic_version SET version_num = :head"), {"head": head})
     assert client.get("/ready").json() == {"status": "ready"}
 
     def unavailable():

@@ -8,7 +8,7 @@ const scheduled = { id: "scheduled-1", role: "Backend Developer", difficulty: "I
 const session = { ...history[0], id: "live-session", status: "in_progress", answered_count: 0, ai_enabled: false, current_sequence: 1, questions: [{ id: "q1", sequence: 1, question_text: "Explain database indexing and its trade-offs.", category: "dbms", difficulty: "Intermediate", source: "question_bank", answer_text: "", answered_at: null }] };
 async function mocks(page: Page, admin = true) {
   await mockWorkspace(page);
-  await page.route("**/api/auth/me", route => route.fulfill({ json: { ...testUser, role: admin ? "admin" : "user" } }));
+  await page.route("**/api/auth/me", route => route.fulfill({ json: { ...testUser, role: admin ? "admin" : "user", permissions: admin ? ["users.view", "users.manage", "interviews.view", "resumes.view", "analytics.view"] : [] } }));
   await page.route("**/api/scheduled", route => route.fulfill({ json: [scheduled] }));
   await page.route("**/api/history?**", route => route.fulfill({ json: history }));
   await page.route("**/api/analytics", route => route.fulfill({ json: analytics }));
