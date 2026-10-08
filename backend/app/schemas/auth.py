@@ -1,10 +1,12 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, SecretStr, field_validator
 
 
 class Credentials(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     email: EmailStr
     password: SecretStr
 
@@ -52,4 +54,5 @@ class UserResponse(BaseModel):
     email: str
     display_name: str
     is_active: bool
+    role: Literal["user", "admin"]
     created_at: datetime

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy import select
 
 from app.api.dependencies import CurrentUser, DbSession
-from app.models.interview import Interview, InterviewAnswer, InterviewQuestion
+from app.models.interview import Interview, InterviewAnswer
 from app.schemas.interview import (
     AnswerRequest,
     InterviewCreate,
@@ -21,13 +21,12 @@ from app.services.evaluation import (
     persist_evaluation,
 )
 from app.services.interviews import (
-    candidate_skills,
+    build_interview,
     now,
     owned_interview,
     session_response,
     summary,
 )
-from app.services.question_bank import select_questions
 from app.services.transcription import (
     MAX_AUDIO_BYTES,
     TranscriptionProvider,
@@ -61,30 +60,7 @@ def list_interviews(user: CurrentUser, db: DbSession):
 
 @router.post("", response_model=InterviewResponse, status_code=201)
 def create_interview(payload: InterviewCreate, user: CurrentUser, db: DbSession):
-    selected = select_questions(
-        payload.role,
-        payload.difficulty,
-        payload.focus_areas,
-        candidate_skills(db, user.id),
-        payload.question_count,
-    )
-    if len(selected) != payload.question_count:
-        raise HTTPException(422, "Not enough distinct questions for this selection")
-    interview = Interview(
-        user_id=user.id,
-        role=payload.role,
-        difficulty=payload.difficulty,
-        focus_areas=payload.focus_areas,
-        question_count=payload.question_count,
-        ai_enabled=payload.ai_enabled,
-    )
-    interview.questions = [
-        InterviewQuestion(
-            sequence=index, question_text=q.question, category=q.skill, difficulty=q.difficulty
-        )
-        for index, q in enumerate(selected, 1)
-    ]
-    db.add(interview)
+    interview = build_interview(db, user.id, payload)
     db.commit()
     return session_response(interview)
 

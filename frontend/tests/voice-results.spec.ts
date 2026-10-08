@@ -52,7 +52,7 @@ test("recording is deliberate and tracks stop with playback and discard", async 
   await page.getByRole("button", { name: "Answer with microphone" }).click();
   expect(await page.evaluate(() => document.documentElement.dataset.permissionCalls)).toBeUndefined();
   await page.getByRole("button", { name: "Start recording" }).click();
-  await expect(page.getByText("Recording active", { exact: false })).toBeVisible();
+  await expect(page.locator(".voice-panel [role=status]")).toContainText("Recording active");
   await page.getByRole("button", { name: "Stop recording" }).click();
   await expect(page.locator("audio")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.dataset.tracksStopped)).toBe("1");

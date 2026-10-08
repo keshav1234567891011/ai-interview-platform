@@ -74,6 +74,19 @@ def main() -> None:
                 else:
                     assert interview.status == "completed" and len(submitted) == 3
                     assert all(question.evaluation and question.evaluation.source == "deterministic" for question in submitted)
+            elif action == "temporary-admin":
+                assert user is not None
+                user.role = "admin"
+                user.token_version += 1
+                db.commit()
+            elif action == "temporary-schedule-due":
+                from datetime import UTC, datetime, timedelta
+                from app.models.schedule import ScheduledInterview
+                assert user is not None
+                scheduled = db.scalar(select(ScheduledInterview).where(ScheduledInterview.user_id == user.id, ScheduledInterview.id == UUID(request["schedule_id"])))
+                assert scheduled is not None and scheduled.status == "scheduled"
+                scheduled.scheduled_at = datetime.now(UTC) - timedelta(seconds=1)
+                db.commit()
             else:
                 raise ValueError("Unsupported validation operation")
             print(json.dumps({"passed": True}))

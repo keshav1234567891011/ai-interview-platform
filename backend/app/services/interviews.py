@@ -5,10 +5,38 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.interview import Interview
+from app.models.interview import Interview, InterviewQuestion
 from app.models.profile import UserProfile
 from app.models.resume import JobAnalysis, JobSkill, Resume
-from app.schemas.interview import InterviewResponse, InterviewSummary, QuestionResponse
+from app.schemas.interview import (
+    InterviewCreate,
+    InterviewResponse,
+    InterviewSummary,
+    QuestionResponse,
+)
+from app.services.question_bank import select_questions
+
+
+def build_interview(db: Session, user_id: UUID, payload: InterviewCreate) -> Interview:
+    selected = select_questions(
+        payload.role,
+        payload.difficulty,
+        payload.focus_areas,
+        candidate_skills(db, user_id),
+        payload.question_count,
+    )
+    if len(selected) != payload.question_count:
+        raise HTTPException(422, "Not enough distinct questions for this selection")
+    interview = Interview(user_id=user_id, **payload.model_dump())
+    interview.questions = [
+        InterviewQuestion(
+            sequence=index, question_text=q.question, category=q.skill, difficulty=q.difficulty
+        )
+        for index, q in enumerate(selected, 1)
+    ]
+    db.add(interview)
+    db.flush()
+    return interview
 
 
 def candidate_skills(db: Session, user_id: UUID) -> set[str]:

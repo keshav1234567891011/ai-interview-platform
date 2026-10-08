@@ -9,6 +9,9 @@ import {
   FileText,
   Search,
   MessagesSquare,
+  CalendarClock,
+  ChartNoAxesCombined,
+  History,
 } from "lucide-react";
 import { useAuth } from "../auth/auth-provider";
 
@@ -18,10 +21,14 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const links = [
     { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
     { href: "/interviews", label: "Interviews", icon: MessagesSquare },
+    { href: "/interviews/scheduled", label: "Scheduled", icon: CalendarClock },
+    { href: "/interviews/history", label: "History", icon: History },
+    { href: "/analytics", label: "Analytics", icon: ChartNoAxesCombined },
     { href: "/resume", label: "Resume workspace", icon: FileText },
     { href: "/jobs/analyze", label: "Job analysis", icon: Search },
     { href: "/profile", label: "Profile & settings", icon: UserRound },
   ];
+  if (user?.role === "admin") links.push({ href: "/admin", label: "Administration", icon: ShieldCheck });
   return (
     <div className="workspace-shell">
       <aside className="workspace-sidebar">
@@ -32,7 +39,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
               key={href}
               href={href}
               aria-current={
-                pathname === href || pathname.startsWith(`${href}/`)
+                pathname === href || (href === "/interviews" ? /^\/interviews\/(?!scheduled|history)/.test(pathname) : pathname.startsWith(`${href}/`))
                   ? "page"
                   : undefined
               }

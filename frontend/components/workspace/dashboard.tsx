@@ -14,6 +14,7 @@ import { Card } from "../ui/card";
 import { ButtonLink } from "../ui/button";
 import { WorkspaceState } from "../ui/workspace-state";
 import { SessionRows } from "./interview-list";
+import { ScheduledCard } from "./scheduled";
 
 export function Dashboard() {
   const { data, loading, error, reload } =
@@ -33,6 +34,7 @@ export function Dashboard() {
           Refine your profile <ArrowRight size={16} aria-hidden="true" />
         </ButtonLink>
       </div>
+      {data.next_scheduled && <section aria-label="Next scheduled interview"><h2 className="upcoming-title">Your next scheduled interview</h2><ScheduledCard item={data.next_scheduled} onUpdate={reload} /></section>}
       <div className="workspace-summary-grid">
         <Card className="workspace-stat">
           <span>Profile completion</span>

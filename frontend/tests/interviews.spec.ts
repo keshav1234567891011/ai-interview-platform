@@ -144,7 +144,7 @@ test("draft survives reload and answer progresses to real completion", async ({
     .getByLabel("Your answer", { exact: true })
     .fill("First I inspect the query execution plan.  ");
   await page.getByRole("button", { name: "Save draft", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Draft saved");
+  await expect(page.locator(".draft-state")).toContainText("Draft saved");
   await page.reload();
   await expect(page.getByLabel("Your answer", { exact: true })).toHaveValue(
     "First I inspect the query execution plan.",

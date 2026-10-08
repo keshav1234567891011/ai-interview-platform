@@ -13,6 +13,7 @@ export type User = {
   email: string;
   display_name: string;
   is_active: boolean;
+  role: "user" | "admin";
   created_at: string;
 };
 type AuthState = {

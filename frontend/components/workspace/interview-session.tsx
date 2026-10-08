@@ -8,6 +8,7 @@ import { Card } from "../ui/card";
 import { Button, ButtonLink } from "../ui/button";
 import { WorkspaceState } from "../ui/workspace-state";
 import { VoiceAnswer } from "./voice-answer";
+import { Interviewer } from "./interviewer";
 
 export function InterviewSession({ id }: { id: string }) {
   const resource = useResource<Interview>(`/interviews/${id}`);
@@ -157,7 +158,7 @@ export function InterviewSession({ id }: { id: string }) {
               trade-offs.
             </p>
             <p className="fine-note">
-              Save your draft before leaving. Submitted answers are final. This
+              Save your draft before leaving. Submitted answers are final. Your
               feedback is available after you complete the interview.
             </p>
             {confirmAbandon ? (
@@ -282,6 +283,7 @@ function AnswerEditor({
   }
   return (
     <Card className="workspace-panel question-panel">
+      <Interviewer question={question.question_text} listening={recording} preparing={busy} />
       <div className="question-label">
         <span>QUESTION {question.sequence.toString().padStart(2, "0")}</span>
         <span>

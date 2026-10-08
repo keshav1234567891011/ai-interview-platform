@@ -4,7 +4,9 @@ from sqlalchemy import func, select
 from app.api.dependencies import CurrentUser, DbSession
 from app.models.interview import Interview
 from app.models.profile import Skill, UserProfile
+from app.models.schedule import ScheduledInterview
 from app.schemas.profile import ProfileResponse, ProfileUpdate, SkillResponse
+from app.schemas.schedule import ScheduleResponse
 from app.services.evaluation import aggregate
 from app.services.interviews import summary
 from app.services.profile import profile_response
@@ -55,10 +57,17 @@ def dashboard(user: CurrentUser, db: DbSession):
         .order_by(Interview.completed_at.desc())
         .limit(1)
     )
+    upcoming = db.scalar(
+        select(ScheduledInterview)
+        .where(ScheduledInterview.user_id == user.id, ScheduledInterview.status == "scheduled")
+        .order_by(ScheduledInterview.scheduled_at)
+        .limit(1)
+    )
     return {
         "profile": profile,
         "recent_interviews": [summary(item) for item in recent],
         "interview_count": count,
+        "next_scheduled": ScheduleResponse.model_validate(upcoming) if upcoming else None,
         "latest_evaluation": {"interview_id": latest.id, **aggregate(latest)}
         if latest and aggregate(latest)
         else None,

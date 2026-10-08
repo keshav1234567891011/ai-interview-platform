@@ -7,11 +7,14 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.requests import Request
 
+from app.api.admin import router as admin_router
+from app.api.analytics import router as analytics_router
 from app.api.auth import router as auth_router
 from app.api.health import router as health_router
 from app.api.interviews import router as interviews_router
 from app.api.profile import router as profile_router
 from app.api.resumes import router as resumes_router
+from app.api.schedules import router as schedules_router
 from app.core.config import BACKEND_ROOT, get_settings
 
 
@@ -32,6 +35,9 @@ def create_app() -> FastAPI:
     application.include_router(profile_router)
     application.include_router(resumes_router)
     application.include_router(interviews_router)
+    application.include_router(schedules_router)
+    application.include_router(analytics_router)
+    application.include_router(admin_router)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=get_settings().frontend_origins,

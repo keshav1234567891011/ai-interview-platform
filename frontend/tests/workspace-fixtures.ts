@@ -4,6 +4,7 @@ export const testUser = {
   display_name: "Test Candidate",
   email: "candidate@example.com",
   is_active: true,
+  role: "user",
   created_at: "2026-01-01T00:00:00Z",
 };
 export const testSkills = [

@@ -56,13 +56,14 @@ function SetupForm({
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [scheduled, setScheduled] = useState(false);
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError("");
     const fields = new FormData(event.currentTarget);
     try {
-      const session = await api<Interview>("/interviews", {
+      const session = await api<Interview>(scheduled ? "/scheduled" : "/interviews", {
         method: "POST",
         body: JSON.stringify({
           role: fields.get("role"),
@@ -70,9 +71,10 @@ function SetupForm({
           question_count: Number(fields.get("question_count")),
           focus_areas: selected,
           ai_enabled: fields.get("ai_enabled") === "on",
+          ...(scheduled ? { scheduled_at: new Date(String(fields.get("scheduled_at"))).toISOString() } : {}),
         }),
       });
-      router.push(`/interviews/${session.id}`);
+      router.push(scheduled ? "/interviews/scheduled" : `/interviews/${session.id}`);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not create this interview.",
@@ -96,6 +98,8 @@ function SetupForm({
               <h2>Your session</h2>
               <Target size={19} aria-hidden="true" />
             </div>
+            <fieldset className="schedule-choice" disabled={busy}><legend>When would you like to practice?</legend><label><input type="radio" name="timing" checked={!scheduled} onChange={() => setScheduled(false)} />Start now</label><label><input type="radio" name="timing" checked={scheduled} onChange={() => setScheduled(true)} />Schedule interview</label></fieldset>
+            {scheduled && <div className="field"><label htmlFor="scheduled-at">Interview date and time</label><input id="scheduled-at" name="scheduled_at" type="datetime-local" required disabled={busy} aria-describedby="timezone-hint" /><small id="timezone-hint">Use your local time. We store the equivalent UTC timestamp and display it in your browser timezone.</small></div>}
             <div className="field">
               <label htmlFor="interview-role">Target role</label>
               <select
@@ -199,7 +203,7 @@ function SetupForm({
               ) : (
                 <ArrowRight size={16} aria-hidden="true" />
               )}
-              {busy ? "Creating your session…" : "Create interview"}
+              {busy ? "Creating your session…" : scheduled ? "Schedule interview" : "Create interview"}
             </Button>
           </Card>
         </form>

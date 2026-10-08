@@ -38,3 +38,12 @@ def get_current_user(token: Annotated[str, Depends(get_token)], db: DbSession) -
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def get_current_admin(user: CurrentUser) -> User:
+    if user.role != "admin":
+        raise HTTPException(403, "Administrator access is required")
+    return user
+
+
+CurrentAdmin = Annotated[User, Depends(get_current_admin)]

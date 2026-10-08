@@ -9,6 +9,7 @@ process.env.TMP = process.env.TEMP;
 
 export default defineConfig({
   testDir: "./live-tests",
+  outputDir: "./live-test-results",
   workers: 1,
   timeout: 180_000,
   reporter: "list",

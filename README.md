@@ -10,6 +10,9 @@ A technical interview preparation workspace for students and job candidates. The
 - **05 - Interviews:** role-aware question bank, persisted sessions and drafts, safe state transitions, and real interview history.
 - **06 - AI assistance:** optional structured question generation, transparent adaptive difficulty, and automatic curated fallback.
 - **07 — Evaluation and voice:** stored rubric-based feedback, private results, descriptive delivery signals, deliberate microphone recording, optional server/browser transcription, and always-available text answers.
+- **08 — Complete workspace:** timezone-aware scheduling, score history, real analytics, an optional procedural 3D interviewer, question speech, and role-protected administration.
+
+See [evaluation and audio privacy](docs/evaluation-voice.md) and [scheduling, analytics and admin bootstrap](docs/scheduling-admin-analytics.md).
 
 ## Stack and architecture
 
