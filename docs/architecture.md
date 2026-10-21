@@ -6,7 +6,7 @@ Owner AI configuration is a singleton PostgreSQL record introduced in migration 
 
 Resume storage retains the existing protocol, with local development and private S3-compatible adapters. Explicit server credentials avoid personal AWS profiles and metadata credential discovery. Render uses object storage; Vercel proxies same-origin browser API calls to the approved HTTPS backend. Neon runtime pooling and direct migration connections are separate. See [production launch](production-launch.md).
 
-InterviewAI is a Next.js application backed by FastAPI and PostgreSQL. It has not been externally deployed by this milestone.
+InterviewAI is a Next.js application backed by FastAPI and PostgreSQL. The [live portfolio demo](https://ai-interview-platform-one-mu.vercel.app) uses Vercel for the frontend, Render for FastAPI, Neon for application data and private Supabase S3 storage for resume objects. The diagram also covers the local development storage option.
 
 ```mermaid
 flowchart TD

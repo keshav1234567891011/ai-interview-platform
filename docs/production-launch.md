@@ -1,6 +1,6 @@
 # Production launch runbook: Vercel, Render, Neon and private object storage
 
-This is a prepared deployment, not a deployed service. Do not publish, connect live infrastructure, run production migrations or incur charges before explicit **GO LIVE** approval. GitHub pushes and CI run tests/builds only. `render.yaml` disables automatic deployments. Creating/importing a hosting project can trigger a deployment: do that only after approval, not as an unattended preparation step.
+The [live InterviewAI portfolio demo](https://ai-interview-platform-one-mu.vercel.app) uses Vercel, Render, Neon and private Supabase S3 storage. This runbook documents fresh-environment setup and ongoing operations; it is not a current health report. Additional publication, infrastructure changes, production migrations and charges require explicit approval. The repository's CI validates source/builds without deploying services, and `render.yaml` disables automatic Render deployments. Creating/importing a hosting project can trigger a deployment: do that only after approval, not as an unattended preparation step.
 
 ## Release gates and current configuration blockers
 

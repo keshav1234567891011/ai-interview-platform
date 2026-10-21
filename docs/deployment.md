@@ -1,8 +1,8 @@
-# Deployment preparation
+# Deployment and container operations
 
-No external deployment is performed or claimed. Dockerfiles and CI prepare the project for a controlled deployment; configure the target infrastructure separately.
+The [live InterviewAI portfolio demo](https://ai-interview-platform-one-mu.vercel.app) is available on Vercel. This guide covers container builds, environment configuration and safe operations for the Vercel/Render/Neon/private-Supabase-storage topology, as well as local container testing. Always verify the actual environment after changes; build configuration and CI alone do not prove live health.
 
-For the selected Vercel/Render/Neon deployment, use the [production launch runbook](production-launch.md). Publication, production migrations and costs require explicit GO LIVE approval. Final source head is migration `0010`; existing application data and owner credentials must be preserved.
+Use the [deployment runbook](production-launch.md) for hosting and operational procedures. Additional deployments, production migrations and costs require explicit approval. The schema head is migration `0010`; existing application data and owner credentials must be preserved.
 
 ## Required environment
 

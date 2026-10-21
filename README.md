@@ -1,54 +1,95 @@
 # InterviewAI
 
-A technical interview practice platform for students and job candidates, with personalized context, voice or text answers, structured feedback and progress tracking. Milestones 01–10 and final owner AI configuration are implemented. Deployment configuration is prepared for Vercel, Render and Neon; the application has not been externally deployed.
+**Practice smarter. Interview better.**
 
-## What you can do
+A full-stack technical interview preparation platform with resume-aware practice, voice or text answers, structured feedback, and progress analytics.
 
-- Create an account, sign in securely and manage a candidate profile with normalized technical skills.
-- Upload a private PDF/DOCX resume, review extracted skills and compare them with a job description. Matching is a deterministic vocabulary baseline, not a hiring judgment; OCR is unsupported.
-- Practice role-specific interviews with recoverable backend drafts and curated questions. Optional AI assistance generates validated questions and adapts difficulty using transparent answer signals.
-- Answer with text or deliberately enable microphone recording, playback and transcription. Text remains available without microphone permission, speech support or an API key.
-- Review stored technical, reasoning and communication feedback, missed concepts and practical recommendations. No-key evaluation is clearly labeled as a conservative baseline estimate.
-- Schedule interviews in your local timezone, reschedule/cancel them and view real history and analytics. Empty accounts show empty states rather than fabricated statistics.
-- Optionally enable a lightweight procedural 3D interviewer and read questions aloud with browser speech. Static text/2D fallbacks preserve the entire interview experience.
-- Use a role-protected admin area to inspect safe account/profile/resume metadata and history, search accounts and manage explicitly safe account fields. Public users cannot promote themselves.
-- Configure encrypted AI credentials, supported models and provider enable/disable controls through the owner-only AI Settings page, with safe deterministic fallback.
+## [Open the live InterviewAI demo](https://ai-interview-platform-one-mu.vercel.app)
 
-The landing-page previews are labeled demonstrations. Authenticated dashboards and analytics use actual stored account/interview data. Detailed delivery metrics describe pace and fillers; the application does not infer personality, emotions, identity or truthfulness.
+[![CI](https://github.com/keshav1234567891011/ai-interview-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/keshav1234567891011/ai-interview-platform/actions/workflows/ci.yml)
 
-## Stack
+[Features](#features) | [Architecture](#architecture) | [Local development](#local-development) | [Testing](#testing) | [Documentation](#documentation)
 
-| Frontend | Backend | Data and operations |
-| --- | --- | --- |
-| Next.js App Router, React, strict TypeScript | FastAPI, Pydantic, Python | PostgreSQL, SQLAlchemy 2.x, Alembic |
-| Tailwind, Geist, Lucide, semantic dark/light themes | Argon2 password hashing, validated JWT sessions | Docker multi-stage builds, GitHub Actions |
-| Lazy Three.js and Recharts, Playwright/Axe | Optional server-only OpenAI, curated fallbacks | Shared PostgreSQL quotas, health/readiness checks |
+The portfolio demo is hosted on Vercel with a FastAPI backend on Render, PostgreSQL on Neon, and private resume storage on Supabase. Free backend hosting may take longer to respond after inactivity. No paid AI credential is needed to use the deterministic interview and evaluation fallback.
+
+## Features
+
+| Area | Capabilities |
+| --- | --- |
+| Candidate workspace | Secure registration and login, editable profiles, target roles, experience levels, and normalized technical skills |
+| Resume and job analysis | Private PDF/DOCX uploads, text parsing, deterministic skill extraction, job-description analysis, matched/missing skills, and baseline match percentage |
+| Mock interviews | Role, difficulty, focus-area and question-count selection; curated questions; persisted answers and recoverable sessions |
+| Optional AI assistance | Context-aware question generation, adaptive difficulty, validated structured output, and automatic fallback on missing credentials or provider failures |
+| Voice or text answers | Deliberate microphone activation, recording controls, playback, reviewed transcripts, and an always-available text workflow |
+| Evaluation and feedback | Technical, reasoning and communication scores; missed concepts; question-level feedback; topic recommendations; descriptive pace and filler signals |
+| Scheduling and progress | Timezone-aware scheduling, rescheduling/cancellation, interview history, real score trends, topic breakdowns, and analytics empty states |
+| Interview experience | Responsive dark/light interface, optional procedural 3D interviewer, browser question read-aloud, and static/text fallbacks |
+| Owner and administration | Single-owner control center, delegated admin permissions, account management, audit events, and owner-only encrypted AI settings |
+
+Authenticated dashboards use stored user data. Landing-page product previews are labeled demonstrations, not real user statistics.
+
+### Try the candidate workflow
+
+1. Open the [live demo](https://ai-interview-platform-one-mu.vercel.app) and create a candidate account.
+2. Complete your profile; optionally upload a resume and compare its skills with a job description.
+3. Choose an interview role, difficulty, focus areas, and question count.
+4. Answer with text or opt into microphone input where supported.
+5. Review results, revisit interview history, and plan your next practice session.
+
+Owner and admin access use the same authentication system with backend-enforced authorization. Privileged accounts and credentials are not published as demo logins.
+
+## Architecture
 
 ```mermaid
 flowchart LR
-  Browser[Browser] --> Next[Next.js / API proxy]
-  Next --> API[FastAPI]
-  API --> DB[(PostgreSQL)]
-  API --> AI[Optional AI providers]
-  API --> Fallback[Curated questions / baseline evaluation]
-  Mic[Deliberate microphone action] --> Transcript[Reviewed transcript]
-  Transcript --> API
+    Browser[Browser] --> Web["Next.js frontend - Vercel"]
+    Web -->|Same-origin /api proxy| API["FastAPI backend - Render"]
+    API --> DB[("PostgreSQL - Neon")]
+    API --> Storage["Private resume objects - Supabase S3"]
+    API --> AI["Optional OpenAI provider"]
+    API --> Fallback["Curated questions and deterministic evaluation"]
+    Mic["User-initiated microphone input"] --> Transcript["Reviewed transcript"]
+    Transcript --> Web
 ```
 
-## Repository
+Browser API requests go through the Next.js proxy. Database, object-storage, JWT, encryption, and AI credentials remain server-side. Neon uses pooled runtime connections and a separate direct connection for controlled migrations. Supabase is used for private object storage; application accounts and records remain in PostgreSQL on Neon.
+
+### Technology stack
+
+| Layer | Technologies |
+| --- | --- |
+| Frontend | Next.js App Router, React, TypeScript, Tailwind CSS, Geist, Lucide React |
+| Visualization | Recharts, lazy-loaded Three.js, browser speech and recording APIs |
+| Backend | Python, FastAPI, Pydantic, SQLAlchemy 2.x, Alembic |
+| Persistence | PostgreSQL, Neon, private S3-compatible Supabase Storage |
+| Security | Argon2 password hashing, validated JWT cookies, session revocation, role/permission checks, Fernet credential encryption |
+| Quality and operations | pytest, Ruff, Playwright, Axe, Docker, GitHub Actions |
+
+### Repository structure
 
 ```text
-frontend/    App Router pages, shared components, browser tests
-backend/     API, schemas, models, services, migrations, isolated tests
-config/      One local development address configuration
-scripts/     Project-local dev launcher and guarded live validation helpers
-docs/        Architecture, security, deployment and milestone decisions
-.github/     CI validation; no external deployment automation
+frontend/       Pages, shared components, design system, browser tests
+backend/        API, schemas, models, services, migrations, backend tests
+config/         Shared local development address configuration
+scripts/        Development launcher and guarded acceptance-test helpers
+docs/           Architecture, security, deployment, and implementation guides
+.github/        CI workflows for frontend, backend, and container validation
+render.yaml     Render backend Blueprint
 ```
 
-## Local setup
+## Local development
 
-Use Node.js 24, Python 3.14 and separately installed PostgreSQL. Install missing system runtimes manually. From the repository root in PowerShell:
+### Prerequisites
+
+- Node.js 24 and npm
+- Python 3.14
+- A separately running PostgreSQL instance
+
+The commands below use PowerShell. Keep dependency installations and generated files inside the repository.
+
+### Install dependencies
+
+From the repository root:
 
 ```powershell
 npm --prefix frontend ci
@@ -56,71 +97,75 @@ python -m venv --copies backend/.venv
 backend/.venv/Scripts/python.exe -m pip install -r backend/requirements-dev.txt
 ```
 
-Manually create ignored `backend/.env` using [backend/.env.example](backend/.env.example) as its format. Set your dedicated `DATABASE_URL` and a cryptographically random `JWT_SECRET` of at least 32 bytes. URL-encode special characters in database credentials. Never paste secrets into chat, print the file or commit it. `OPENAI_API_KEY` is optional; leave it empty for complete deterministic operation. Owner-managed API keys additionally require an independent stable `SETTINGS_ENCRYPTION_KEY` (a valid Fernet key) in the backend environment; never print it or reuse the JWT secret.
+### Configure the backend
 
-From `backend/`, apply reviewed migrations without deleting/recreating your database:
+Create an ignored `backend/.env` using [backend/.env.example](backend/.env.example) as the format. Supply private local values; do not copy production credentials into development.
+
+| Setting | Purpose |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection using the `postgresql+psycopg` driver; URL-encode special characters in credentials |
+| `JWT_SECRET` | Independent cryptographically random signing secret of at least 32 bytes |
+| `SETTINGS_ENCRYPTION_KEY` | Valid Fernet key, required for owner-managed encrypted AI credentials; keep stable and privately backed up |
+| `OPENAI_API_KEY` | Optional environment fallback; omit for deterministic operation |
+| `FRONTEND_ORIGINS` | Explicit permitted frontend origins; local defaults are configured by the application |
+
+Local resume storage is the default. Production uses the existing S3 adapter with explicit bucket, region, endpoint, and server-only credentials. See [storage and deployment configuration](docs/production-launch.md). Frontend hosting configuration is documented in [frontend/.env.example](frontend/.env.example); `BACKEND_API_URL` is server-only and is resolved before the frontend build.
+
+Apply the migration chain to your configured local database:
 
 ```powershell
-.venv/Scripts/python.exe -m alembic upgrade head
+backend/.venv/Scripts/python.exe -m alembic -c backend/alembic.ini upgrade head
 ```
 
-From the repository root, start the entire application:
+### Start both services
+
+From the repository root:
 
 ```powershell
 npm run dev
 ```
 
-| Service | URL |
+| Service | Local URL |
 | --- | --- |
 | Frontend | http://localhost:3000 |
 | Backend | http://127.0.0.1:8010 |
-| API docs | http://127.0.0.1:8010/docs |
+| FastAPI documentation | http://127.0.0.1:8010/docs |
 | Liveness | http://127.0.0.1:8010/health |
-| Database/JWT/migration readiness | http://127.0.0.1:8010/ready |
+| Database, migration and JWT readiness | http://127.0.0.1:8010/ready |
 
-PostgreSQL runs separately, normally on port 5432. The root launcher starts both services, provides frontend hot reload and restarts its own backend child on Python edits. It may reuse healthy existing InterviewAI services and stops only processes it started. Local addresses are centralized in `config/development.json`; no unknown port-8000 process needs inspection or termination.
+The root command starts the frontend and backend with source reload. PostgreSQL runs separately, normally on port 5432. Development addresses are centralized in `config/development.json`. See the [local development guide](docs/local-development.md) for launcher behavior and troubleshooting.
 
-Browser `/api/*` calls use the existing Next.js proxy. Deployment `BACKEND_API_URL` is server-only and supplied **before frontend build**; changing it requires rebuilding. No browser-exposed credential or duplicate API URL configuration is needed.
+## AI, voice, and privacy
 
-## AI, audio and session behavior
+- **Optional AI:** candidate-opted-in sessions can use profile, resume, job-description, and recent-answer context. Structured outputs are validated before use. Missing keys, invalid responses, duplicates, timeouts, and provider errors fall back safely.
+- **Owner AI settings:** `/owner/ai-settings` supports encrypted credential replacement/removal, supported model selection, provider enable/disable, and explicit connection testing. An enabled provider prefers a usable encrypted database credential, then the environment credential. Explicit disable blocks both sources.
+- **Microphone control:** recording starts only after deliberate user action. Recording state is visible, media tracks stop when finished or the page is left, and text input remains available. Raw audio is not permanently retained by the application; submitted transcripts and feedback are persisted.
+- **Session security:** HttpOnly JWT cookies, Secure cookies in production, expiry/issuer/audience checks, active-account and session-version validation, logout revocation, explicit-origin write protection, and shared database rate limits.
+- **Authorization:** public registration creates a normal user. Admin permissions are checked on the backend for each request. Only the owner manages delegated admins and AI credentials; safe responses do not expose saved credentials, hashes, or session tokens.
 
-AI-assisted interviews require candidate opt-in. Profile/resume/job excerpts and recent answers can then be sent to the configured provider. The owner may replace a database-encrypted credential at `/owner/ai-settings`; subsequent provider requests resolve the database credential first, then the environment key. Explicit provider disable blocks both sources. The server validates structured questions/evaluations and falls back on missing keys, invalid output, duplicates, timeouts and failures. Automated tests never make paid calls. Lightweight adaptation is an interview practice heuristic, not a final ability assessment. See [encrypted AI settings](docs/owner-ai-settings.md).
+For a **fresh installation only**, the [owner bootstrap procedure](docs/owner-control-center.md) uses private temporary credentials and enforces a first-login password change. Never rerun bootstrap to replace an existing owner or change a deployed owner's password.
 
-Microphone access begins only after Start recording. Recording is visible, tracks stop when finished/hidden/unmounted, and temporary playback is discarded/revoked. Server transcription processes validated WAV audio in memory and closes it after processing; raw recordings are not permanently stored. Browser recognition availability and vendor processing vary. Saved transcripts, durations and feedback persist in PostgreSQL. Pause metrics are omitted when timing is unavailable.
+### Current limitations
 
-Sessions use HttpOnly, SameSite=Lax JWT cookies, never localStorage. Production cookies are Secure and require HTTPS. Expiry, issuer, audience, integer version and current active account/role are checked. Logout invalidates all account sessions. Writes require a custom header and allowed Origin; credentialed CORS has no wildcard. Shared database quotas protect authentication, interview/provider work and transcription across workers.
+Deterministic evaluation is a conservative practice estimate, not a human assessment or hiring decision. Resume matching uses a curated vocabulary, and OCR is not supported. Voice recognition, recording and speech playback depend on browser capabilities and permissions. Communication feedback describes delivery signals; it does not infer emotion, personality or truthfulness. Email verification and email-based password recovery are not implemented. Automated retention/erasure workflows and an independent penetration test are not claimed.
 
-## Owner bootstrap and delegated administration
+## Testing
 
-Configure `OWNER_BOOTSTRAP_EMAIL` and a private temporary `OWNER_BOOTSTRAP_PASSWORD` in ignored `backend/.env`. After applying migrations, run from `backend/`:
-
-```powershell
-.venv/Scripts/python.exe -m app.cli bootstrap-owner
-```
-
-Bootstrap creates/promotes only the configured account, enforces one active owner and is idempotent without resetting an existing password. First login opens `/change-password`; normal APIs remain blocked until the owner chooses a new password. Remove the bootstrap password from the environment after setup. No real password belongs in source, documentation, tests or CLI arguments.
-
-The owner uses `/owner/admins` to create/promote separate admins, assign granular permissions, activate/deactivate, reset temporary passwords and revoke delegation. New/reset admins must change their password too. Only the owner can manage admins; max-permission admins cannot modify the owner or access owner AI/security settings. Safe account APIs never return hashes or tokens. All successful privileged changes produce safe audit events. AI keys can be encrypted in PostgreSQL; the encryption key remains environment-managed and no saved credential is exposed.
-
-See [owner control center and permission boundaries](docs/owner-control-center.md). Existing admins receive no automatic permissions during migration; the owner reviews their access explicitly.
-
-## Checks
-
-From `frontend/`:
+Frontend checks, from the repository root:
 
 ```powershell
-npm run lint
-npm run typecheck
-npm run build
-$env:PLAYWRIGHT_BROWSERS_PATH = Join-Path (Split-Path (Get-Location).Path) '.local/browsers'
+npm --prefix frontend run lint
+npm --prefix frontend run typecheck
+npm --prefix frontend run build
+$env:PLAYWRIGHT_BROWSERS_PATH = Join-Path (Get-Location).Path '.local/browsers'
+Push-Location frontend
 npx playwright install chromium --no-shell
-npm run test:e2e
-npm run test:owner-integration
+Pop-Location
+npm --prefix frontend run test:e2e
+npm --prefix frontend run test:owner-integration
 ```
 
-Mocked browser tests start the production application on port 3107 and cover authenticated workflows, mobile/desktop layouts, light/dark themes, accessibility, microphone denial/unsupported behavior and 3D/speech fallbacks. Keep downloaded browsers inside the repository.
-
-From `backend/`:
+Backend checks, from `backend/`:
 
 ```powershell
 $env:TEMP = Join-Path (Get-Location).Path 'runtime/tmp'
@@ -129,23 +174,38 @@ $env:TMP = $env:TEMP
 .venv/Scripts/python.exe -m ruff check app tests alembic
 .venv/Scripts/python.exe -m ruff format --check app tests alembic
 .venv/Scripts/python.exe -m app.migration_check
-.venv/Scripts/python.exe -m pip check
 ```
 
-Migration validation checks SQLite upgrades/downgrades and metadata parity plus PostgreSQL offline SQL without a live secret. Isolated tests use in-memory SQLite and mocked provider/audio boundaries; these are separate from live PostgreSQL verification.
+Run `npm run test:dev-config` at the root to verify the development launcher configuration. Automated tests use isolated databases, synthetic accounts, and mocked AI/transcription calls; they require no paid API access or microphone hardware. Browser tests cover role protection, owner/admin flows, accessibility, responsive layouts, themes, and feature fallbacks. Migration checks validate upgrade/downgrade behavior, schema parity, and offline PostgreSQL SQL.
 
-Run `npm run test:dev-config` at root. For deliberate browser validation against the running development application and configured PostgreSQL, run `npm run test:live` from `frontend/`. It creates a clearly marked temporary account, checks authentication/profile/interviews/results/scheduling/analytics/admin authorization, then deletes only that account and its dependent data. A separate owner/admin acceptance case uses an isolated in-memory backend and synthetic credentials; it never changes the real owner or provider settings. Trace/video/screenshot capture is disabled to avoid retaining authenticated state. No microphone hardware or paid call is required.
+[GitHub Actions](https://github.com/keshav1234567891011/ai-interview-platform/actions/workflows/ci.yml) runs frontend lint/types/build/browser checks, backend tests/lint/migration checks, and container builds/startup checks. CI results establish those checks, not a complete audit of the live deployment.
 
-## Deployment preparation
+## Deployment and operations
 
-See the [Vercel/Render/Neon launch runbook](docs/production-launch.md), [container deployment procedure](docs/deployment.md), [architecture](docs/architecture.md) and [security/privacy](docs/security.md) before public launch. Docker builds use repository-root context filtering, non-root runtimes and standalone frontend output. Compose runs application containers against separately provisioned PostgreSQL. CI validates source, mocked UI, migrations and image builds without deployment or paid AI calls. `render.yaml` and `frontend/vercel.json` are prepared configuration only; production publication requires explicit GO LIVE approval.
+The [live portfolio demo](https://ai-interview-platform-one-mu.vercel.app) uses the Vercel, Render, Neon and Supabase topology described above. [render.yaml](render.yaml) and [frontend/vercel.json](frontend/vercel.json) define the hosting setup; the Dockerfiles support container builds from repository-root context. Review the [deployment and operations runbook](docs/production-launch.md) before changing infrastructure, origins, migrations, credentials, or storage.
 
-Configure HTTPS, production origins and independent secrets, reviewed migrations, ingress throttling/resource limits, backups and retention/deletion procedures. A private S3-compatible `ResumeStorage` adapter is implemented (`STORAGE_BACKEND=s3`) and requires a configured bucket and explicit credentials; no production provider is assumed. Container filesystems are not durable storage. `python -m app.release_check` reports missing release configuration without revealing values. Email verification, public email-based password recovery and comprehensive retention/erasure workflows remain blocked on required infrastructure/policy; they are not claimed as implemented. Potentially exposed local credentials require the [controlled rotation procedure](docs/local-credential-rotation.md) and explicit approval before changes.
+Runtime database connections are pooled; migration connections are direct and TLS-protected. Uploaded resumes use private durable object storage rather than Render's ephemeral filesystem. Production secrets belong in the backend host's private environment, never in frontend/public variables, build arguments, committed files, or screenshots. Back up the settings encryption key independently: replacing an in-use key without re-encryption makes saved provider credentials unreadable.
 
-## Development and security
+Keep migration execution and owner bootstrap separate from ordinary application startup. Configure exact HTTPS origins, verify `/health` and `/ready` after changes, and maintain backup/restore and retention procedures. Do not assume a source-code push or a green CI badge proves live health.
 
-Milestone branches start from latest `main`; checks precede commits and normal pushes, followed by `--ff-only` into main. Never force push or rewrite published history. Preserve repository-local Git identity and avoid co-author trailers. **Never commit `.env`, credentials, user uploads, recordings or test databases.** Examples contain placeholders only; environments/caches/artifacts are ignored.
+## Documentation
 
-Additional decisions: [design system](docs/design-system.md), [authentication](docs/authentication.md), [resume matching](docs/resume-analysis.md), [interview engine](docs/interview-engine.md), [AI fallback](docs/ai-interviewer.md), [voice and evaluation](docs/evaluation-voice.md), [local development](docs/local-development.md).
+| Guide | Contents |
+| --- | --- |
+| [Architecture](docs/architecture.md) | API proxy, service boundaries, persistence, and provider flow |
+| [Local development](docs/local-development.md) | Shared ports, root launcher, reload, and local verification |
+| [Deployment runbook](docs/production-launch.md) | Vercel, Render, Neon, Supabase, backups, and operational checks |
+| [Docker and migrations](docs/deployment.md) | Container builds, environment setup, schema upgrades, and readiness |
+| [Security and privacy](docs/security.md) | Sessions, authorization, uploads, audio, rate limits, and secret handling |
+| [Owner control center](docs/owner-control-center.md) | Single-owner bootstrap, delegated permissions, and password management |
+| [Encrypted AI settings](docs/owner-ai-settings.md) | Credential resolution, encryption, model controls, and auditing |
+| [Resume and job analysis](docs/resume-analysis.md) | Parsing, skill extraction, ownership, and baseline matching |
+| [Interview engine](docs/interview-engine.md) | Session lifecycle, curated questions, and persisted answers |
+| [AI interviewer](docs/ai-interviewer.md) | Adaptive generation, structured validation, and fallback behavior |
+| [Voice and evaluation](docs/evaluation-voice.md) | Transcription, communication signals, results, and feedback |
+| [Scheduling, analytics and administration](docs/scheduling-admin-analytics.md) | Scheduling, real-data analytics, avatar behavior, and admin boundaries |
+| [Design system](docs/design-system.md) | Theme tokens, typography, spacing, and accessibility |
 
-See [milestones 07–09 verification and validation limits](docs/milestones-07-09.md) for the recorded checks.
+Earlier [milestone reports](docs/milestones-07-09.md) and the [launch-readiness snapshot](docs/final-launch-readiness.md) are historical records, not current deployment-status pages.
+
+**Never commit `.env` files, credentials, user resumes, recordings, or test databases.** Environment examples contain placeholders only.
