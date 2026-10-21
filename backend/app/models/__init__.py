@@ -1,4 +1,5 @@
 from app.models.administration import AdminPermission, AuditEvent
+from app.models.ai_settings import AISettings
 from app.models.interview import AnswerEvaluation, Interview, InterviewAnswer, InterviewQuestion
 from app.models.profile import ProfileSkill, Skill, UserProfile
 from app.models.rate_limit import RateLimitBucket
@@ -8,6 +9,7 @@ from app.models.user import User
 
 __all__ = [
     "User",
+    "AISettings",
     "AdminPermission",
     "AuditEvent",
     "ProfileSkill",

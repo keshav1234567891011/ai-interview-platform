@@ -1,4 +1,12 @@
 import type { Page } from "@playwright/test";
+export const testAISettings = {
+  enabled: true, configured: false, database_key_present: false,
+  credential_source: "none", encryption_status: "ready",
+  text_model: "gpt-5-mini", transcription_model: "gpt-4o-mini-transcribe",
+  text_models: ["gpt-5-mini", "gpt-5-nano"],
+  transcription_models: ["gpt-4o-mini-transcribe", "gpt-4o-transcribe"],
+  fallback_active: true, fallback_available: true, updated_at: null, updated_by: null,
+};
 export const testUser = {
   id: "7e825abb-5c52-45f3-8bf7-e1f3de552d22",
   display_name: "Test Candidate",

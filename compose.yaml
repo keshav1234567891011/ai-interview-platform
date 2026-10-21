@@ -9,8 +9,12 @@ services:
       APP_ENV: ${APP_ENV:-production}
       DATABASE_URL: ${DATABASE_URL:?Configure a PostgreSQL connection reachable from the container}
       JWT_SECRET: ${JWT_SECRET:?Configure a random signing secret}
+      SETTINGS_ENCRYPTION_KEY: ${SETTINGS_ENCRYPTION_KEY:?Configure an independent Fernet encryption key}
+      MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:-}
       FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-["http://localhost:3000"]}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5-mini}
+      OPENAI_TRANSCRIPTION_MODEL: ${OPENAI_TRANSCRIPTION_MODEL:-gpt-4o-mini-transcribe}
       STORAGE_DIRECTORY: runtime/uploads
     volumes:
       - resume_data:/app/backend/runtime/uploads

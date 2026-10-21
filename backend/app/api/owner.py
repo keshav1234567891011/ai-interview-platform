@@ -11,9 +11,17 @@ from app.core.rate_limit import reserve
 from app.core.security import password_hash
 from app.models.administration import AuditEvent
 from app.models.user import User
+from app.schemas.ai_settings import (
+    AISettingsResponse,
+    AISettingsUpdate,
+    APIKeyReplace,
+    ConnectionResult,
+)
 from app.schemas.auth import UserResponse
 from app.schemas.owner import AdminCreate, AdminState, PermissionUpdate, TemporaryPassword
 from app.services.administration import assign_permissions, audit, lock_owner, lock_user
+from app.services.ai_settings import cipher, editable, resolved
+from app.services.provider_connection import test_connection
 
 router = APIRouter(prefix="/api/owner", tags=["Owner control center"])
 
@@ -34,15 +42,70 @@ def admins(owner: CurrentOwner, db: DbSession, offset: int = Query(0, ge=0, le=1
     ).all()
 
 
-@router.get("/ai-settings")
-def ai_settings(owner: CurrentOwner):
-    # Secrets remain environment-managed; never return a key or key fragment.
-    settings = get_settings()
-    return {
-        "configured": bool(settings.openai_api_key),
-        "model": settings.openai_model,
-        "management": "environment",
-    }
+@router.get("/ai-settings", response_model=AISettingsResponse)
+def ai_settings(owner: CurrentOwner, db: DbSession):
+    return resolved(db)[1]
+
+
+@router.put("/ai-settings", response_model=AISettingsResponse)
+def update_ai_settings(payload: AISettingsUpdate, owner: CurrentOwner, db: DbSession):
+    owner = mutation_owner(db, owner)
+    previous = resolved(db)[1]
+    record = editable(db, owner)
+    if previous.enabled != payload.enabled:
+        audit(
+            db, owner, owner, "ai_provider_enabled" if payload.enabled else "ai_provider_disabled"
+        )
+    if (previous.text_model, previous.transcription_model) != (
+        payload.text_model,
+        payload.transcription_model,
+    ):
+        audit(db, owner, owner, "ai_models_changed")
+    record.enabled = payload.enabled
+    record.text_model = payload.text_model
+    record.transcription_model = payload.transcription_model
+    db.commit()
+    return resolved(db)[1]
+
+
+@router.put("/ai-settings/key", response_model=AISettingsResponse)
+def replace_ai_key(payload: APIKeyReplace, owner: CurrentOwner, db: DbSession):
+    encrypted = cipher().encrypt(payload.api_key.get_secret_value().encode()).decode("ascii")
+    owner = mutation_owner(db, owner)
+    record = editable(db, owner)
+    action = "ai_key_replaced" if record.encrypted_api_key else "ai_key_added"
+    record.encrypted_api_key = encrypted
+    audit(db, owner, owner, action)
+    db.commit()
+    return resolved(db)[1]
+
+
+@router.delete("/ai-settings/key", response_model=AISettingsResponse)
+def remove_ai_key(owner: CurrentOwner, db: DbSession):
+    cipher()  # Missing/invalid encryption configuration must fail closed for key mutations.
+    owner = mutation_owner(db, owner)
+    record = editable(db, owner)
+    if record.encrypted_api_key:
+        record.encrypted_api_key = None
+        audit(db, owner, owner, "ai_key_removed")
+    db.commit()
+    return resolved(db)[1]
+
+
+@router.post("/ai-settings/test", response_model=ConnectionResult)
+def test_ai_connection(owner: CurrentOwner, db: DbSession):
+    if get_settings().app_env != "test":
+        reserve(db, "owner-ai-connection", str(owner.id), 3, 60)
+    owner = mutation_owner(db, owner)
+    settings, status = resolved(db)
+    # Release the owner lock before bounded network I/O; no external request under a row lock.
+    audit(db, owner, owner, "ai_connection_tested")
+    db.commit()
+    if not status.enabled:
+        return ConnectionResult(status="disabled")
+    if status.fallback_active:
+        return ConnectionResult(status="not_configured")
+    return ConnectionResult(status=test_connection(settings))
 
 
 @router.get("/audit")

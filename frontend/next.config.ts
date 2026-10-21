@@ -6,6 +6,7 @@ const developmentBackend = `http://${development.backend.host}:${development.bac
 
 function backendDestination(): string {
   try {
+    if (process.env.VERCEL === "1" && !process.env.BACKEND_API_URL) throw new Error();
     const url = new URL(process.env.BACKEND_API_URL ?? developmentBackend);
     if (
       !["http:", "https:"].includes(url.protocol) ||
@@ -13,6 +14,7 @@ function backendDestination(): string {
     ) {
       throw new Error();
     }
+    if (process.env.VERCEL === "1" && (url.protocol !== "https:" || ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))) throw new Error();
     return url.origin;
   } catch {
     throw new Error("BACKEND_API_URL must be an HTTP(S) origin without credentials, path, or query.");

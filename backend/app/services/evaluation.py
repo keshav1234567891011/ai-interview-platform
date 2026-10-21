@@ -3,15 +3,18 @@
 import json
 import logging
 import re
-from typing import Protocol
+from typing import Annotated, Protocol
 
 import httpx
+from fastapi import Depends
 from openai import OpenAI
+from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.db.session import get_session
 from app.models.interview import AnswerEvaluation, Interview, InterviewQuestion
 from app.schemas.evaluation import EvaluationResponse, RubricEvaluation
-from app.services.ai_provider import ai_configured
+from app.services.ai_settings import runtime_settings, usable
 from app.services.communication import communication_signals
 
 # Expected concepts remain backend-only and are never sent with active questions.
@@ -48,8 +51,11 @@ class EvaluationProvider(Protocol):
 
 
 class OpenAIEvaluationProvider:
+    def __init__(self, settings=None):
+        self.settings = settings or get_settings()
+
     def evaluate(self, question: str, answer: str, concepts: list[str]) -> RubricEvaluation:
-        settings = get_settings()
+        settings = self.settings
         with httpx.Client(timeout=settings.ai_timeout_seconds, trust_env=False) as transport:
             with OpenAI(
                 api_key=settings.openai_api_key.get_secret_value(),
@@ -93,8 +99,11 @@ class OpenAIEvaluationProvider:
                 return RubricEvaluation.model_validate(response.output_parsed)
 
 
-def get_evaluation_provider() -> EvaluationProvider | None:
-    return OpenAIEvaluationProvider() if ai_configured() else None
+def get_evaluation_provider(
+    db: Annotated[Session | None, Depends(get_session)] = None,
+) -> EvaluationProvider | None:
+    settings = runtime_settings(db)
+    return OpenAIEvaluationProvider(settings) if usable(settings.openai_api_key) else None
 
 
 def fallback_evaluation(question: InterviewQuestion, text: str) -> RubricEvaluation:

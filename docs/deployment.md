@@ -2,6 +2,8 @@
 
 No external deployment is performed or claimed. Dockerfiles and CI prepare the project for a controlled deployment; configure the target infrastructure separately.
 
+For the selected Vercel/Render/Neon deployment, use the [production launch runbook](production-launch.md). Publication, production migrations and costs require explicit GO LIVE approval. Final source head is migration `0010`; existing application data and owner credentials must be preserved.
+
 ## Required environment
 
 Use `backend/.env.example` and `frontend/.env.example` as formats only. Actual files must remain ignored. Configure secrets manually in a deployment secret store/environment, never in Docker build arguments or source.
@@ -11,6 +13,8 @@ Use `backend/.env.example` and `frontend/.env.example` as formats only. Actual f
 | `APP_ENV=production` | Secure session cookies and production behavior |
 | `DATABASE_URL` | PostgreSQL URL using `postgresql+psycopg`, URL-encoded credentials and appropriate TLS |
 | `JWT_SECRET` | Cryptographically random secret, at least 32 bytes; rotating it invalidates sessions and quota keys |
+| `SETTINGS_ENCRYPTION_KEY` | Stable independent Fernet key for owner-configured provider credentials |
+| `MIGRATION_DATABASE_URL` | Direct/unpooled PostgreSQL URL for operator-run Alembic migrations |
 | `JWT_ALGORITHM=HS256` | Only supported pinned algorithm |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Session lifetime, default 30 |
 | `FRONTEND_ORIGINS` | JSON list of exact frontend HTTPS origins |
@@ -68,7 +72,7 @@ docker compose --env-file backend/.env.production up -d
 
 The production default needs HTTPS for authentication: place a TLS reverse proxy in front of the frontend's loopback-bound port. Do not expect Secure cookies to authenticate over plain HTTP. For an isolated HTTP-only local container smoke test, deliberately set `APP_ENV=development` and exact `FRONTEND_ORIGINS=["http://localhost:3000"]` in that ignored configuration; never use that setting for a public deployment. Ordinary local development remains `npm run dev` and does not require Docker.
 
-The named `resume_data` volume persists single-host files. Back it up; do not remove it casually. This is not distributed object storage. For multiple hosts/ephemeral deployment, implement the existing `ResumeStorage` interface with durable private object storage and a retention policy. Audio is not permanently stored by the application.
+The named `resume_data` volume persists single-host files. Back it up; do not remove it casually. This is not distributed object storage. For Render/multiple hosts/ephemeral deployment, configure the implemented private S3-compatible adapter using `STORAGE_BACKEND=s3` and the bucket/credential variables in `.env.example`; follow the object-transfer and retention procedure before switching an existing populated instance. Audio is not permanently stored by the application.
 
 ## Ingress and release checks
 

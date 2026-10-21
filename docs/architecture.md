@@ -1,5 +1,11 @@
 # Architecture
 
+## Final launch additions
+
+Owner AI configuration is a singleton PostgreSQL record introduced in migration `0010`. The existing owner authorization and row lock guard credential/model mutations; Fernet encrypts credentials using an independent server-only key. Provider factories resolve current database settings per request and preserve the deterministic fallback. No disabled provider silently activates an environment key. See [AI settings](owner-ai-settings.md).
+
+Resume storage retains the existing protocol, with local development and private S3-compatible adapters. Explicit server credentials avoid personal AWS profiles and metadata credential discovery. Render uses object storage; Vercel proxies same-origin browser API calls to the approved HTTPS backend. Neon runtime pooling and direct migration connections are separate. See [production launch](production-launch.md).
+
 InterviewAI is a Next.js application backed by FastAPI and PostgreSQL. It has not been externally deployed by this milestone.
 
 ```mermaid

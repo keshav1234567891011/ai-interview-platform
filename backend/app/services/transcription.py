@@ -2,14 +2,16 @@
 
 import wave
 from io import BytesIO
-from typing import Protocol
+from typing import Annotated, Protocol
 
 import httpx
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 from openai import OpenAI
+from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.services.ai_provider import ai_configured
+from app.db.session import get_session
+from app.services.ai_settings import runtime_settings, usable
 
 MAX_AUDIO_BYTES = 10 * 1024 * 1024
 MAX_DURATION = 300
@@ -50,8 +52,11 @@ class TranscriptionProvider(Protocol):
 
 
 class OpenAITranscriptionProvider:
+    def __init__(self, settings=None):
+        self.settings = settings or get_settings()
+
     def transcribe(self, data: bytes) -> str:
-        settings = get_settings()
+        settings = self.settings
         with httpx.Client(timeout=settings.ai_timeout_seconds, trust_env=False) as transport:
             with OpenAI(
                 api_key=settings.openai_api_key.get_secret_value(),
@@ -61,7 +66,8 @@ class OpenAITranscriptionProvider:
                 http_client=transport,
             ) as client:
                 response = client.audio.transcriptions.create(
-                    model="gpt-4o-mini-transcribe", file=("answer.wav", data, "audio/wav")
+                    model=settings.openai_transcription_model,
+                    file=("answer.wav", data, "audio/wav"),
                 )
                 text = response.text.strip()
                 if not text or len(text) > 12000:
@@ -69,5 +75,8 @@ class OpenAITranscriptionProvider:
                 return text
 
 
-def get_transcription_provider() -> TranscriptionProvider | None:
-    return OpenAITranscriptionProvider() if ai_configured() else None
+def get_transcription_provider(
+    db: Annotated[Session | None, Depends(get_session)] = None,
+) -> TranscriptionProvider | None:
+    settings = runtime_settings(db)
+    return OpenAITranscriptionProvider(settings) if usable(settings.openai_api_key) else None

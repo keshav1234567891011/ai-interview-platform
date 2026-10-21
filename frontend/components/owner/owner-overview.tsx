@@ -4,6 +4,7 @@ import { Card } from "../ui/card";
 import { ButtonLink } from "../ui/button";
 import { useResource } from "@/lib/use-resource";
 import { WorkspaceState } from "../ui/workspace-state";
+import type { AISettings } from "@/lib/ai-settings-types";
 type Audit = { id: string; actor_id: string | null; target_id: string | null; action: string; created_at: string };
 export function OwnerOverview() {
   const { user } = useAuth();
@@ -13,9 +14,10 @@ export function OwnerOverview() {
     ["Candidate accounts", "Review safe profiles, practice history and account state.", "/admin/users", "View users"],
     ["Account & security", "Change your password and review AI configuration status.", "/owner/security", "Open security"],
     ["Application activity", "Review real account and interview totals.", "/admin", "View activity"],
+    ["AI settings", "Manage encrypted provider credentials, models and safe fallback.", "/owner/ai-settings", "Configure AI"],
   ].map(([title, copy, href, label]) => <Card className="workspace-panel" key={href}><h2>{title}</h2><p className="panel-copy">{copy}</p><ButtonLink variant="secondary" href={href}>{label}</ButtonLink></Card>)}</div><Card className="workspace-panel report-section"><h2>Recent audit activity</h2><p className="fine-note">Only action names, account identifiers and permission changes are retained here.</p>{!events.data || events.loading || events.error ? <WorkspaceState loading={events.loading} error={events.error} retry={events.reload} /> : events.data.length ? <div className="audit-list">{events.data.map(event => <div className="topic-row" key={event.id}><div><strong>{event.action.replaceAll("_", " ")}</strong><small>Target: {event.target_id || "Removed account"}</small></div><time dateTime={event.created_at}>{new Date(event.created_at).toLocaleString()}</time></div>)}</div> : <p className="panel-copy">No administrative events yet.</p>}</Card></>;
 }
 export function AIConfigurationStatus() {
-  const settings = useResource<{ configured: boolean; model: string; management: string }>("/owner/ai-settings");
-  return <Card className="workspace-panel report-section"><h2>AI configuration</h2>{!settings.data || settings.loading || settings.error ? <WorkspaceState loading={settings.loading} error={settings.error} retry={settings.reload} /> : <><p>{settings.data.configured ? "Provider configured" : "Deterministic fallback active"} · {settings.data.model}</p><p className="fine-note">Keys remain in server environment configuration. This owner-only view never reveals a key or allows delegated admins to manage it.</p></>}</Card>;
+  const settings = useResource<AISettings>("/owner/ai-settings");
+  return <Card className="workspace-panel report-section"><h2>AI configuration</h2>{!settings.data || settings.loading || settings.error ? <WorkspaceState loading={settings.loading} error={settings.error} retry={settings.reload} /> : <><p>{settings.data.configured ? "Provider configured" : "Deterministic fallback active"} · {settings.data.text_model}</p><p className="fine-note">Manage encrypted credentials and provider controls in AI Settings. Delegated admins cannot access these controls.</p><ButtonLink href="/owner/ai-settings" variant="secondary">Open AI Settings</ButtonLink></>}</Card>;
 }

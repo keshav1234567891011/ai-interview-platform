@@ -61,4 +61,28 @@ def test_root_container_context_excludes_private_and_runtime_files():
         dockerfile = (ROOT / directory / "Dockerfile").read_text(encoding="utf-8")
         assert dockerfile.count("FROM ") >= 2
         assert "USER " in dockerfile and "HEALTHCHECK" in dockerfile
-        assert "COPY . " not in dockerfile and ".env" not in dockerfile
+        assert "COPY . " not in dockerfile
+        copies = [line for line in dockerfile.splitlines() if line.lstrip().startswith("COPY ")]
+        assert all(".env" not in line for line in copies)
+
+
+def test_hosting_preparation_has_no_automatic_deployment_or_credentials():
+    import json
+
+    blueprint = yaml.safe_load((ROOT / "render.yaml").read_text(encoding="utf-8"))
+    assert "databases" not in blueprint
+    service = blueprint["services"][0]
+    assert service["autoDeployTrigger"] == "off" and service["plan"] == "free"
+    assert service["healthCheckPath"] == "/ready"
+    assert service["dockerContext"] == "." and service["dockerfilePath"] == "./backend/Dockerfile"
+    environments = {item["key"]: item for item in service["envVars"]}
+    for name in [
+        "DATABASE_URL",
+        "MIGRATION_DATABASE_URL",
+        "JWT_SECRET",
+        "SETTINGS_ENCRYPTION_KEY",
+        "S3_SECRET_ACCESS_KEY",
+    ]:
+        assert environments[name] == {"key": name, "sync": False}
+    frontend = json.loads((ROOT / "frontend/vercel.json").read_text(encoding="utf-8"))
+    assert frontend["framework"] == "nextjs" and frontend["buildCommand"] == "npm run build"

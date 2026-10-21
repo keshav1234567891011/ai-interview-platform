@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { testUser, mockWorkspace, testProfile } from "./workspace-fixtures";
+import { testUser, mockWorkspace, testProfile, testAISettings } from "./workspace-fixtures";
 import { randomBytes } from "node:crypto";
 const permissions = ["users.view", "users.manage", "interviews.view", "resumes.view", "analytics.view", "support.manage"];
 const owner = { ...testUser, role: "owner", permissions, display_name: "Application Owner" };
@@ -11,11 +11,11 @@ async function mocks(page: Page, current = owner) {
   await mockWorkspace(page);
   await page.route("**/api/auth/me", route => route.fulfill({ json: current }));
   await page.route("**/api/owner/audit**", route => route.fulfill({ json: [{ id: "event-1", actor_id: owner.id, target_id: admin.id, action: "admin_created", created_at: owner.created_at }] }));
-  await page.route("**/api/owner/ai-settings", route => route.fulfill({ json: { configured: false, model: "configured-model", management: "environment" } }));
+  await page.route("**/api/owner/ai-settings", route => route.fulfill({ json: testAISettings }));
   await page.route("**/api/owner/admins?**", route => route.fulfill({ json: [admin] }));
 }
 
-for (const width of [375, 1440]) for (const view of ["owner", "owner/admins", "owner/admins/new", "owner/security", "change-password"]) {
+for (const width of [375, 1440]) for (const view of ["owner", "owner/admins", "owner/admins/new", "owner/security", "owner/ai-settings", "change-password"]) {
   test(`${view} accessible at ${width}px in both themes`, async ({ page }) => {
     await mocks(page); await page.emulateMedia({ reducedMotion: "reduce" }); await page.setViewportSize({ width, height: 1000 }); await page.goto(`/${view}`);
     await expect(page.locator(".workspace-heading h1")).toBeVisible();

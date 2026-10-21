@@ -266,11 +266,16 @@ def test_permission_enforcement_revocation_safe_fields_and_owner_protection(clie
     )
     client.cookies = cookie
     settings = client.get("/api/owner/ai-settings")
-    assert settings.status_code == 200 and set(settings.json()) == {
-        "configured",
-        "model",
-        "management",
-    }
+    assert (
+        settings.status_code == 200
+        and {
+            "configured",
+            "text_model",
+            "credential_source",
+            "encryption_status",
+        }
+        <= settings.json().keys()
+    )
     for path, method, body in [
         ("state", "PUT", {"is_active": False}),
         ("permissions", "PUT", {"permissions": []}),

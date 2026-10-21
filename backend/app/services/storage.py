@@ -38,4 +38,8 @@ class LocalResumeStorage:
 
 
 def get_storage() -> ResumeStorage:
+    if get_settings().storage_backend == "s3":
+        from app.services.object_storage import S3ResumeStorage
+
+        return S3ResumeStorage()
     return LocalResumeStorage()

@@ -20,6 +20,13 @@ AuditAction = Literal[
     "admin_password_changed",
     "user_password_changed",
     "user_updated",
+    "ai_key_added",
+    "ai_key_replaced",
+    "ai_key_removed",
+    "ai_provider_enabled",
+    "ai_provider_disabled",
+    "ai_models_changed",
+    "ai_connection_tested",
 ]
 
 

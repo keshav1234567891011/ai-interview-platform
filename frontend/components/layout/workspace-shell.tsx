@@ -31,7 +31,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   if (user?.role === "admin" || user?.role === "owner") links.push({ href: "/admin", label: "Administration", icon: ShieldCheck });
   if (user?.role === "owner") {
     links.unshift({ href: "/owner", label: "Owner overview", icon: ShieldCheck });
-    links.push({ href: "/owner/admins", label: "Delegated admins", icon: UserRound }, { href: "/owner/security", label: "Account & security", icon: ShieldCheck });
+    links.push({ href: "/owner/admins", label: "Delegated admins", icon: UserRound }, { href: "/owner/security", label: "Account & security", icon: ShieldCheck }, { href: "/owner/ai-settings", label: "AI settings", icon: ShieldCheck });
   }
   return (
     <div className="workspace-shell">

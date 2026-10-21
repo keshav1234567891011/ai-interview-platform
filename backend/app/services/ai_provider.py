@@ -1,14 +1,18 @@
 """Only this boundary communicates with the external question-generation provider."""
 
 import json
-from typing import Literal, Protocol
+from typing import Annotated, Literal, Protocol
 
 import httpx
+from fastapi import Depends
 from openai import OpenAI
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from sqlalchemy.orm import Session
 
-from app.core.config import Settings, get_settings
+from app.core.config import Settings
+from app.db.session import get_session
 from app.schemas.interview import Difficulty, Role
+from app.services.ai_settings import runtime_settings, usable
 
 Category = Literal[
     "dsa",
@@ -119,12 +123,12 @@ class OpenAIQuestionProvider:
                 return GeneratedQuestion.model_validate(response.output_parsed)
 
 
-def ai_configured() -> bool:
-    key = get_settings().openai_api_key
-    return bool(
-        key and key.get_secret_value().strip() and not key.get_secret_value().startswith("REPLACE_")
-    )
+def ai_configured(db: Session | None = None) -> bool:
+    return usable(runtime_settings(db).openai_api_key)
 
 
-def get_question_provider() -> QuestionProvider | None:
-    return OpenAIQuestionProvider(get_settings()) if ai_configured() else None
+def get_question_provider(
+    db: Annotated[Session | None, Depends(get_session)] = None,
+) -> QuestionProvider | None:
+    settings = runtime_settings(db)
+    return OpenAIQuestionProvider(settings) if usable(settings.openai_api_key) else None

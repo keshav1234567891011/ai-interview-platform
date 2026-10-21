@@ -19,15 +19,27 @@ class Settings(BaseSettings):
 
     app_env: Literal["development", "test", "production"] = "development"
     database_url: SecretStr | None = None
+    migration_database_url: SecretStr | None = None
+    database_pool_size: int = Field(default=2, ge=1, le=20)
+    database_max_overflow: int = Field(default=3, ge=0, le=20)
     jwt_secret: SecretStr | None = None
     owner_bootstrap_email: str | None = None
     owner_bootstrap_password: SecretStr | None = None
     jwt_algorithm: Literal["HS256"] = "HS256"
     access_token_expire_minutes: int = Field(default=30, ge=1, le=1440)
     openai_api_key: SecretStr | None = None
+    settings_encryption_key: SecretStr | None = None
+    openai_transcription_model: str = "gpt-4o-mini-transcribe"
     openai_model: str = Field(default="gpt-5-mini", min_length=1, max_length=100)
     ai_timeout_seconds: float = Field(default=15, ge=1, le=30)
     storage_directory: str = "runtime/uploads"
+    storage_backend: Literal["local", "s3"] = "local"
+    s3_bucket: str | None = None
+    s3_region: str = "us-east-1"
+    s3_endpoint_url: str | None = None
+    s3_access_key_id: SecretStr | None = None
+    s3_secret_access_key: SecretStr | None = None
+    s3_session_token: SecretStr | None = None
     frontend_origins: list[str] = [DEVELOPMENT_FRONTEND, "http://127.0.0.1:3107"]
 
     model_config = SettingsConfigDict(
@@ -68,7 +80,25 @@ class Settings(BaseSettings):
             raise ValueError("Storage directory must resolve inside the backend directory")
         return value
 
-    @field_validator("database_url")
+    @field_validator("s3_endpoint_url")
+    @classmethod
+    def secure_storage_endpoint(cls, value):
+        from urllib.parse import urlsplit
+
+        if value:
+            url = urlsplit(value)
+            if (
+                url.scheme != "https"
+                or not url.netloc
+                or url.username
+                or url.query
+                or url.fragment
+                or url.path not in {"", "/"}
+            ):
+                raise ValueError("S3 endpoint must be an HTTPS origin without credentials")
+        return value or None
+
+    @field_validator("database_url", "migration_database_url")
     @classmethod
     def validate_database_url(cls, value: SecretStr | None) -> SecretStr | None:
         if value is None:

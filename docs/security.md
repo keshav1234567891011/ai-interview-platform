@@ -1,5 +1,7 @@
 # Security and privacy
 
+Owner-managed API credentials now use authenticated encryption at rest, explicit owner-only mutation checks, strict model allowlists, current per-request credential resolution, safe auditing and bounded metadata-only probes. See [AI credential security](owner-ai-settings.md). The encryption key is independent of JWT secrets and never modified through the web application. Production storage supports private S3-compatible objects with explicit credentials; provider configuration and a verified retention/backup policy remain launch prerequisites.
+
 This is a deployment baseline, not a claim of an independent penetration test. Automated checks use mocks for AI/audio and isolated databases. Live development PostgreSQL checks are reported separately.
 
 ## Accounts and sessions

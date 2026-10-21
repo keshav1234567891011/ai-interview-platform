@@ -41,7 +41,7 @@ Even a fully delegated admin cannot modify a privileged account, create an owner
 
 ## AI settings and audit
 
-`GET /api/owner/ai-settings` is owner-only and returns only configured/not-configured, model name and environment-management status. Keys and encryption settings remain server environment configuration; the application does **not** provide a web key editor or return any secret/key fragment. No-key deterministic functionality remains available. Neither owner nor admin account APIs expose password hashes, cookies, tokens, raw SQL, resume content or shell/filesystem access.
+`/owner/ai-settings` and its owner-only APIs manage encrypted provider credentials, supported text/transcription models and provider enable/disable state. PostgreSQL stores authenticated ciphertext; `SETTINGS_ENCRYPTION_KEY` remains server-only environment configuration. Saved credentials, fragments and ciphertext are never returned. Database credentials take priority over the environment fallback, and explicit disable blocks all sources. See [owner AI settings and key lifecycle](owner-ai-settings.md). Neither owner nor admin account APIs expose password hashes, cookies, tokens, raw SQL, resume content or shell/filesystem access.
 
 Audit events are stored in the same transaction as successful changes: bootstrap, creation/promotion, permissions, reset, enable/disable, revoke, password changes and safe candidate updates. They retain action names, account identifiers, timestamps and permission identifiers only. Request bodies, passwords and secrets are never copied into audit metadata. Owner-only `/api/owner/audit` is paginated. Deleted-account identifiers become null through foreign keys; production audit retention/export remains an operator policy.
 

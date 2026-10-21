@@ -15,6 +15,11 @@ def get_database_url() -> str:
     return url.get_secret_value()
 
 
+def get_migration_database_url() -> str:
+    direct = get_settings().migration_database_url
+    return direct.get_secret_value() if direct else get_database_url()
+
+
 @lru_cache
 def get_engine() -> Engine:
     """Create the engine on demand; importing the app never connects to PostgreSQL."""
@@ -22,8 +27,11 @@ def get_engine() -> Engine:
         get_database_url(),
         pool_pre_ping=True,
         echo=False,
-        connect_args={"connect_timeout": 5},
+        connect_args={"connect_timeout": 5, "prepare_threshold": None},
         pool_timeout=5,
+        pool_size=get_settings().database_pool_size,
+        max_overflow=get_settings().database_max_overflow,
+        pool_recycle=300,
     )
 
 

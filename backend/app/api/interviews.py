@@ -43,8 +43,9 @@ Transcriber = Annotated[TranscriptionProvider | None, Depends(get_transcription_
 
 
 @router.get("/capabilities")
-def interview_capabilities(user: CurrentUser):
-    return {"ai_available": ai_configured(), "transcription_available": ai_configured()}
+def interview_capabilities(user: CurrentUser, db: DbSession):
+    available = ai_configured(db)
+    return {"ai_available": available, "transcription_available": available}
 
 
 @router.get("", response_model=list[InterviewSummary])
