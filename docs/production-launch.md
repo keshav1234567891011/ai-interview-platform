@@ -24,7 +24,7 @@ Configure values privately in the provider's environment/secret interface. Never
 | `OPENAI_MODEL` / `OPENAI_TRANSCRIPTION_MODEL` | Supported defaults; owner may later change models in the UI |
 | `STORAGE_BACKEND` | `s3` |
 | `S3_BUCKET`, `S3_REGION` | Dedicated private bucket and region |
-| `S3_ENDPOINT_URL` | HTTPS S3-compatible origin, or omit for AWS S3 |
+| `S3_ENDPOINT_URL` | HTTPS S3-compatible origin; Supabase uses its full `/storage/v1/s3` endpoint; omit for AWS S3 |
 | `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Dedicated least-privilege object credentials |
 | `S3_SESSION_TOKEN` | Optional explicit session credential |
 
@@ -56,6 +56,31 @@ Provision a dedicated private S3-compatible bucket after provider/cost approval.
 The app stores extracted text and metadata in PostgreSQL. Existing local upload objects do not automatically move to object storage; migrate them deliberately while preserving storage keys and counts. Do not switch a populated instance's storage backend until transfer and retrieval/cleanup paths have been validated. Raw audio remains short-lived and is not permanently stored by the application.
 
 Missing bucket/provider credentials are a real launch blocker. Local/container filesystem storage is appropriate only for development or a deliberately backed-up single-host volume, not Render's ephemeral filesystem.
+
+### Supabase Storage for the free portfolio demo
+
+Keep Neon as the application PostgreSQL database. Supabase is used only for private resume objects; do not migrate application users/tables into its database or introduce Supabase Auth.
+
+Use the existing S3 adapter with `STORAGE_BACKEND=s3`, bucket `interviewai-resumes`, region `ap-northeast-1`, and the complete HTTPS endpoint copied from Supabase Storage's S3 settings, including `/storage/v1/s3`. Both the direct storage hostname and the project hostname are supported. The adapter uses path-style addressing for custom endpoints. Endpoint validation continues to reject credentials in URLs, query/fragment values and unrelated paths. Credentials must be generated **S3 access keys**, not publishable/anon/service-role API keys. Values belong only in ignored private configuration and the backend hosting secret interface.
+
+Supabase's generated S3 access keys bypass RLS and can access all buckets in their project. A private bucket does not restrict those backend credentials to one bucket; never expose them to the frontend or imply RLS provides isolation from the server key. Use a project intended for InterviewAI where possible, restrict application operations to the configured bucket and preserve user ownership checks. Never add public ACLs or change bucket visibility to make uploads work.
+
+Before deployment, verify one small synthetic PDF with a newly generated unused key under `resumes/`: upload through the existing adapter, authenticated download with exact byte comparison, anonymous public-download denial, then deletion and confirmed absence. Do not list/download real resumes, create database records, or alter policies. Retain only safe test status and the owned cleanup key in ignored verification metadata; suppress SDK headers, credential values and raw errors. If cleanup fails, resolve only that recorded temporary object before retrying. Free-plan quotas and account settings must be checked in the provider dashboards; do not enable paid storage or upgrades automatically.
+
+Reference: [Supabase S3 authentication and endpoint configuration](https://supabase.com/docs/guides/storage/s3/authentication).
+
+### Free hosting checklist after storage verification
+
+The approved fresh Neon demo already has schema `0010` and its own first-change-required owner. Preserve local PostgreSQL and the separate local owner. Do not import test users, rerun bootstrap, or run migrations as part of web-service startup. Bootstrap credentials and private first-login files must never be imported into hosting runtime variables.
+
+After explicit **GO LIVE** approval and provider sign-in:
+
+1. Render: connect the existing GitHub repository on reviewed `main`; choose a **Free Docker web service**, repository-root build context and `backend/Dockerfile`. Leave the Docker start command as supplied, health check `/ready`, automatic deployments off. Do not create Render Postgres, disks, cron jobs or paid services. Use Neon pooled `DATABASE_URL`, independent production JWT/encryption settings, the verified Supabase S3 values, pool size 1/max overflow 0, and exact approved HTTPS `FRONTEND_ORIGINS`. The direct Neon URL is for controlled migration tooling; no startup migration is required. Keep OpenAI unconfigured for the deterministic demo. The prepared Blueprint includes a separate migration URL field; if using it, populate privately and never invoke migrations automatically.
+2. Vercel: use **Hobby** for this personal portfolio demo, the same repository/`main`, Next.js, root directory `frontend`, and enable **Include source files outside of the Root Directory in the Build Step**. Existing `frontend/vercel.json` supplies installation/build commands. Set only server-side `BACKEND_API_URL` to the actual HTTPS Render origin. Never put database/S3/JWT/encryption/owner credentials in Vercel or any `NEXT_PUBLIC_*` variable.
+3. Coordinate the actual provider-assigned HTTPS URLs before opening the demo: Render's exact allowed frontend origin must match the final Vercel URL, and Vercel must be rebuilt with the actual Render URL. Do not use wildcard CORS or guessed URLs as final configuration. Check `/health`, `/ready`, same-origin frontend `/api`, login, forced first password change, private resume upload, deterministic interview/results and logout. The owner performs their own first password change; automation must not choose it.
+4. Confirm both dashboards still show free plans and no paid add-ons; check usage limits. Render Free can sleep and cold-start, and is a portfolio demo rather than an uptime guarantee. No custom paid domain, keep-alive service or paid AI request is required. Review backup, recovery and retention operations separately.
+
+Project creation/import can immediately publish a deployment. Preparing private files and this checklist is not permission to create those resources before GO LIVE.
 
 ## 4. Render backend
 

@@ -40,11 +40,15 @@ def test_production_preflight_reports_configuration_blockers_without_values():
     assert "DATABASE_URL remote TLS configuration" in blockers(ready)
 
 
-def test_s3_adapter_private_explicit_credentials_and_safe_keys(monkeypatch):
+@pytest.mark.parametrize(
+    "custom_endpoint", [None, "https://example.storage.supabase.co/storage/v1/s3"]
+)
+def test_s3_adapter_private_explicit_credentials_and_safe_keys(monkeypatch, custom_endpoint):
     monkeypatch.setenv("STORAGE_BACKEND", "s3")
     monkeypatch.setenv("S3_BUCKET", "synthetic-private-bucket")
     monkeypatch.setenv("S3_ACCESS_KEY_ID", secrets.token_urlsafe(24))
     monkeypatch.setenv("S3_SECRET_ACCESS_KEY", secrets.token_urlsafe(48))
+    monkeypatch.setenv("S3_ENDPOINT_URL", custom_endpoint or "")
     get_settings.cache_clear()
     calls = []
 
@@ -72,6 +76,10 @@ def test_s3_adapter_private_explicit_credentials_and_safe_keys(monkeypatch):
     assert "ACL" not in calls[0] and calls[0]["Bucket"] == "synthetic-private-bucket"
     assert factory_options[0]["aws_access_key_id"] and factory_options[0]["aws_secret_access_key"]
     assert factory_options[0]["verify"] is True
+    assert factory_options[0]["endpoint_url"] == custom_endpoint
+    assert factory_options[0]["config"].s3["addressing_style"] == (
+        "path" if custom_endpoint else "auto"
+    )
     storage.delete(key)
     assert len(calls) == 2
     with pytest.raises(ValueError):
@@ -106,11 +114,33 @@ def test_s3_configuration_absence_and_failures_do_not_discover_credentials(monke
         "https://user:password@storage.example",
         "https://storage.example/path",
         "https://storage.example?secret=value",
+        "https://example.storage.supabase.co/storage/v1/object",
+        "https://storage.example/storage/v1/s3",
+        "https://example.storage.supabase.co.evil.example/storage/v1/s3",
+        "https://example.storage.supabase.co/storage/v1/s3/other",
+        "https://example.storage.supabase.co/storage/v1/s3?credential=synthetic",
+        "https://example.storage.supabase.co/storage/v1/s3#fragment",
+        "https://@example.storage.supabase.co/storage/v1/s3",
     ],
 )
 def test_s3_endpoint_must_be_explicit_https_origin(endpoint):
     with pytest.raises(ValidationError):
         Settings(_env_file=None, s3_endpoint_url=endpoint)
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "https://example.storage.supabase.co/storage/v1/s3",
+        "https://example.supabase.co/storage/v1/s3",
+        "https://example.storage.supabase.co/storage/v1/s3/",
+        "https://private-s3.example",
+    ],
+)
+def test_s3_endpoint_accepts_supabase_base_path_and_existing_origins(endpoint):
+    assert Settings(_env_file=None, s3_endpoint_url=endpoint).s3_endpoint_url == endpoint.rstrip(
+        "/"
+    )
 
 
 def test_migration_connection_prefers_explicit_direct_url(monkeypatch):

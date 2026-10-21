@@ -42,6 +42,7 @@ class S3ResumeStorage:
                 retries={"total_max_attempts": 1},
                 proxies={},
                 signature_version="s3v4",
+                s3={"addressing_style": "path" if settings.s3_endpoint_url else "auto"},
             ),
         )
 

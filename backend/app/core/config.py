@@ -83,20 +83,28 @@ class Settings(BaseSettings):
     @field_validator("s3_endpoint_url")
     @classmethod
     def secure_storage_endpoint(cls, value):
+        import re
         from urllib.parse import urlsplit
 
         if value:
             url = urlsplit(value)
+            supabase_s3 = (
+                re.fullmatch(r"[a-z0-9-]+(?:\.storage)?\.supabase\.co", url.hostname or "")
+                and url.path.rstrip("/") == "/storage/v1/s3"
+            )
             if (
                 url.scheme != "https"
                 or not url.netloc
-                or url.username
+                or url.username is not None
+                or url.password is not None
                 or url.query
                 or url.fragment
-                or url.path not in {"", "/"}
+                or (url.path not in {"", "/"} and not supabase_s3)
             ):
-                raise ValueError("S3 endpoint must be an HTTPS origin without credentials")
-        return value or None
+                raise ValueError(
+                    "S3 endpoint must be HTTPS with no credentials and a supported base path"
+                )
+        return value.rstrip("/") if value else None
 
     @field_validator("database_url", "migration_database_url")
     @classmethod
