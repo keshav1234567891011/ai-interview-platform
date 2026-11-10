@@ -3,7 +3,7 @@ from functools import lru_cache
 from pathlib import Path, PureWindowsPath
 from typing import Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
 
@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     jwt_algorithm: Literal["HS256"] = "HS256"
     access_token_expire_minutes: int = Field(default=30, ge=1, le=1440)
     openai_api_key: SecretStr | None = None
+    gemini_api_key: SecretStr | None = None
+    # Explicit allowlist; owners must use an unbilled project to avoid charges.
+    gemini_model: Literal["gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite"] = (
+        "gemini-3.1-flash-lite"
+    )
     settings_encryption_key: SecretStr | None = None
     openai_transcription_model: str = "gpt-4o-mini-transcribe"
     openai_model: str = Field(default="gpt-5-mini", min_length=1, max_length=100)
@@ -48,6 +53,22 @@ class Settings(BaseSettings):
         extra="ignore",
         hide_input_in_errors=True,
     )
+
+    @model_validator(mode="after")
+    def production_database_is_remote(self):
+        if self.app_env == "production":
+            for value in (self.database_url, self.migration_database_url):
+                if value is None:
+                    continue
+                parsed = make_url(value.get_secret_value())
+                host = (parsed.host or "").casefold().rstrip(".")
+                if (
+                    host in {"", "localhost", "::1", "0.0.0.0", "host.docker.internal"}
+                    or host.startswith("127.")
+                    or host.endswith(".localhost")
+                ):
+                    raise ValueError("Production database settings must not point to a local host")
+        return self
 
     @field_validator("frontend_origins")
     @classmethod

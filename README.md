@@ -19,7 +19,7 @@ The portfolio demo is hosted on Vercel with a FastAPI backend on Render, Postgre
 | Candidate workspace | Secure registration and login, editable profiles, target roles, experience levels, and normalized technical skills |
 | Resume and job analysis | Private PDF/DOCX uploads, text parsing, deterministic skill extraction, job-description analysis, matched/missing skills, and baseline match percentage |
 | Mock interviews | Role, difficulty, focus-area and question-count selection; curated questions; persisted answers and recoverable sessions |
-| Optional AI assistance | Context-aware question generation, adaptive difficulty, validated structured output, and automatic fallback on missing credentials or provider failures |
+| Optional AI assistance | Google Gemini free-tier (`gemini-3.1-flash-lite`) context-aware questions, adaptive follow-ups, structured evaluation, sample answers, and deterministic fallback |
 | Voice or text answers | Deliberate microphone activation, recording controls, playback, reviewed transcripts, and an always-available text workflow |
 | Evaluation and feedback | Technical, reasoning and communication scores; missed concepts; question-level feedback; topic recommendations; descriptive pace and filler signals |
 | Scheduling and progress | Timezone-aware scheduling, rescheduling/cancellation, interview history, real score trends, topic breakdowns, and analytics empty states |
@@ -46,7 +46,7 @@ flowchart LR
     Web -->|Same-origin /api proxy| API["FastAPI backend - Render"]
     API --> DB[("PostgreSQL - Neon")]
     API --> Storage["Private resume objects - Supabase S3"]
-    API --> AI["Optional OpenAI provider"]
+    API --> AI["Optional Google Gemini free-tier provider"]
     API --> Fallback["Curated questions and deterministic evaluation"]
     Mic["User-initiated microphone input"] --> Transcript["Reviewed transcript"]
     Transcript --> Web
@@ -106,7 +106,7 @@ Create an ignored `backend/.env` using [backend/.env.example](backend/.env.examp
 | `DATABASE_URL` | PostgreSQL connection using the `postgresql+psycopg` driver; URL-encode special characters in credentials |
 | `JWT_SECRET` | Independent cryptographically random signing secret of at least 32 bytes |
 | `SETTINGS_ENCRYPTION_KEY` | Valid Fernet key, required for owner-managed encrypted AI credentials; keep stable and privately backed up |
-| `OPENAI_API_KEY` | Optional environment fallback; omit for deterministic operation |
+| `GEMINI_API_KEY` | Optional Google AI Studio free-tier key for interview questions/evaluation; omit for deterministic operation |
 | `FRONTEND_ORIGINS` | Explicit permitted frontend origins; local defaults are configured by the application |
 
 Local resume storage is the default. Production uses the existing S3 adapter with explicit bucket, region, endpoint, and server-only credentials. See [storage and deployment configuration](docs/production-launch.md). Frontend hosting configuration is documented in [frontend/.env.example](frontend/.env.example); `BACKEND_API_URL` is server-only and is resolved before the frontend build.
@@ -133,12 +133,12 @@ npm run dev
 | Liveness | http://127.0.0.1:8010/health |
 | Database, migration and JWT readiness | http://127.0.0.1:8010/ready |
 
-The root command starts the frontend and backend with source reload. PostgreSQL runs separately, normally on port 5432. Development addresses are centralized in `config/development.json`. See the [local development guide](docs/local-development.md) for launcher behavior and troubleshooting.
+The root command starts the frontend and backend with source reload. PostgreSQL runs separately. This workstation uses the isolated development instance at `127.0.0.1:55432`; other developers can configure their own PostgreSQL instance. Both database URLs must refer to development locally and to Neon in production. Development addresses are centralized in `config/development.json`. See the [local development guide](docs/local-development.md) for launcher behavior and troubleshooting.
 
 ## AI, voice, and privacy
 
-- **Optional AI:** candidate-opted-in sessions can use profile, resume, job-description, and recent-answer context. Structured outputs are validated before use. Missing keys, invalid responses, duplicates, timeouts, and provider errors fall back safely.
-- **Owner AI settings:** `/owner/ai-settings` supports encrypted credential replacement/removal, supported model selection, provider enable/disable, and explicit connection testing. An enabled provider prefers a usable encrypted database credential, then the environment credential. Explicit disable blocks both sources.
+- **Optional AI:** candidate-opted-in sessions send bounded profile, resume, job-description, and recent-answer context to the backend-configured Google Gemini `gemini-3.1-flash-lite` model. Use an unbilled Gemini project: application code cannot guarantee zero charges for an arbitrary billed account. Backend GEMINI_MODEL defaults to gemini-3.1-flash-lite and retains explicit legacy 2.5 alternatives for eligible projects. Structured outputs are validated before use. Missing keys, quota limits, invalid responses, duplicates, timeouts, and provider errors fall back safely. See [Gemini setup and data handling](docs/ai-interviewer.md).
+- **Owner AI settings:** `/owner/ai-settings` shows the backend-selected Gemini model, saved synthetic connection-test results, and safe pacing/fallback diagnostics. The master switch controls AI availability. Encrypted stored OpenAI credentials belong to separately optional legacy transcription; they never override Gemini credentials. Browser voice and text practice work without OpenAI billing.
 - **Microphone control:** recording starts only after deliberate user action. Recording state is visible, media tracks stop when finished or the page is left, and text input remains available. Raw audio is not permanently retained by the application; submitted transcripts and feedback are persisted.
 - **Session security:** HttpOnly JWT cookies, Secure cookies in production, expiry/issuer/audience checks, active-account and session-version validation, logout revocation, explicit-origin write protection, and shared database rate limits.
 - **Authorization:** public registration creates a normal user. Admin permissions are checked on the backend for each request. Only the owner manages delegated admins and AI credentials; safe responses do not expose saved credentials, hashes, or session tokens.
@@ -209,3 +209,26 @@ Keep migration execution and owner bootstrap separate from ordinary application 
 Earlier [milestone reports](docs/milestones-07-09.md) and the [launch-readiness snapshot](docs/final-launch-readiness.md) are historical records, not current deployment-status pages.
 
 **Never commit `.env` files, credentials, user resumes, recordings, or test databases.** Environment examples contain placeholders only.
+
+
+## Release and submission
+
+The latest real Gemini implementation has been verified locally. The existing public demo may run an earlier commit until an explicitly approved deployment; this README does not claim production Gemini verification. See the [release report](docs/release-readiness.md), [deployment and rollback procedure](docs/release-deployment.md), and [credential rotation plan](docs/credential-rotation.md).
+
+Publication, credential rotation, production migrations and deployment require separate approval. Render auto-deploy is prepared as off; `frontend/vercel.json` disables automatic Git-triggered deployments. Confirm the effective existing project settings before pushing. No deployment job is configured in GitHub Actions.
+
+### Screenshots
+
+![Interview report using isolated mocked demonstration data](docs/screenshots/gemini-report.png)
+
+[Screenshot provenance and remaining placeholders](docs/screenshots/README.md). This reviewed capture uses isolated mocked demonstration data, not production candidate information or evidence of a live Gemini call.
+
+### Internship / SDE project description
+
+InterviewAI is a full-stack technical interview practice platform built with Next.js, FastAPI and PostgreSQL. It uses Google's Gemini API for consented, resume- and job-aware questions, rubric-based evaluation and adaptive follow-ups, with persistent feedback, private resume storage, role-based administration, and quota-aware deterministic fallback.
+
+### Release checks
+
+Run `python scripts/check_release.py` before staging changes. It checks publishable source files without loading local secrets and reports only file/key names. CI repeats this check and runs the npm vulnerability audit. In a private operator process configured with the reviewed production environment, `python -m app.release_check` checks configuration without making network requests or reading the local development `.env`. Render Free does not provide a production shell: run this offline check locally or in an explicitly approved existing runner, without upgrading a plan. `/ready` and an approved post-deployment smoke test still verify live behavior.
+
+Fresh local verification on 2026-11-10: **189 backend tests, 118 browser tests, and one isolated owner/admin integration test passed**. Lint, formatting, TypeScript, migration validation, dependency compatibility, development configuration and production build passed. Both container builds and the isolated proxy/startup smoke test passed. The online npm audit reported zero known vulnerabilities. The final hosted release remains pending; see the release report for exact boundaries.

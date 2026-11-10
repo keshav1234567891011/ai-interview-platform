@@ -106,6 +106,7 @@ def test_successful_validated_ai_evaluation():
                 concepts_missed=[],
                 feedback="A clear, relevant explanation.",
                 improvement_suggestion="Compare another approach and its trade-offs.",
+                sample_answer="An index speeds up reads but adds storage and write overhead.",
             )
 
     result = evaluate_answer(question(), Provider())

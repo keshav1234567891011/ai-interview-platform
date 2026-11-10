@@ -1,4 +1,3 @@
-import logging
 import re
 
 from sqlalchemy import select
@@ -7,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.models.interview import Interview, InterviewQuestion
 from app.models.profile import UserProfile
 from app.models.resume import JobAnalysis, Resume
+from app.services.ai_diagnostics import failure_reason, record_fallback
 from app.services.ai_provider import CandidateContext, GeneratedQuestion, QuestionProvider
 from app.services.interviews import candidate_skills
 from app.services.question_bank import ROLE_SKILLS, select_questions
@@ -62,6 +62,29 @@ def context_for(db: Session, interview: Interview, difficulty: str) -> Candidate
         .limit(1)
     )
     submitted = [q for q in interview.questions if q.answer and q.answer.answered_at]
+    evaluation = (
+        submitted[-1].evaluation.details["evaluation"]
+        if submitted and submitted[-1].evaluation and submitted[-1].evaluation.source == "ai"
+        else None
+    )
+    guidance = (
+        {
+            key: evaluation[key]
+            for key in (
+                "source",
+                "technical_score",
+                "reasoning_score",
+                "practical_score",
+                "concepts_missed",
+                "weaknesses",
+                "feedback",
+                "improvement_suggestion",
+            )
+            if key in evaluation
+        }
+        if evaluation
+        else None
+    )
     return CandidateContext(
         role=interview.role,
         difficulty=difficulty,
@@ -72,6 +95,7 @@ def context_for(db: Session, interview: Interview, difficulty: str) -> Candidate
         job_excerpt=job.description[:4000] if job else "",
         previous_questions=[q.question_text for q in submitted],
         previous_answers=[q.answer.answer_text[:2000] for q in submitted[-3:]],
+        previous_evaluation=guidance,
     )
 
 
@@ -81,6 +105,7 @@ def prepare_question(
     target: InterviewQuestion,
     provider: QuestionProvider | None,
     previous_answer: str = "",
+    fallback_reason: str = "not_configured",
 ) -> None:
     if not interview.ai_enabled:
         return
@@ -89,6 +114,16 @@ def prepare_question(
         if previous_answer
         else interview.difficulty
     )
+    evaluated = [q for q in interview.questions if q.evaluation]
+    if evaluated and evaluated[-1].evaluation.source == "ai":
+        latest = evaluated[-1].evaluation
+        levels = ["Beginner", "Intermediate", "Advanced"]
+        level = levels.index(evaluated[-1].difficulty)
+        if latest.technical_score < 45:
+            level = max(0, level - 1)
+        elif latest.technical_score >= 80 and latest.reasoning_score >= 75:
+            level = min(2, level + 1)
+        difficulty = levels[level]
     other_prompts = [q.question_text for q in interview.questions if q.id != target.id]
     skills = candidate_skills(db, interview.user_id)
     # Fallback is selected before network work; never discard the stored session on provider errors.
@@ -104,6 +139,7 @@ def prepare_question(
         target.difficulty = fallback.difficulty
         target.source = "question_bank"
     if provider is None:
+        record_fallback(db, "question", fallback_reason)
         return
     try:
         result = GeneratedQuestion.model_validate(
@@ -115,12 +151,13 @@ def prepare_question(
             or result.category not in allowed
             or duplicate_question(result.question, other_prompts)
         ):
+            record_fallback(db, "question", "invalid_output", attempted=True)
             return
         target.question_text = result.question
         target.category = result.category
         target.difficulty = result.difficulty
         target.source = "ai"
-    except Exception:
-        # Do not log provider exceptions: they can contain private prompts or transport headers.
-        logging.getLogger("interviewai").warning("question_provider_fallback")
+    except Exception as exc:
+        reason, code = failure_reason(exc)
+        record_fallback(db, "question", reason, attempted=True, http_code=code)
         return

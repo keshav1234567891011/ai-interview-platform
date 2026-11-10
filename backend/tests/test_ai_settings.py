@@ -74,21 +74,26 @@ def test_resolution_priority_removal_environment_fallback_and_disable(
     client, configured_owner, monkeypatch
 ):
     environment, database = fake_key(), fake_key()
+    gemini = secrets.token_urlsafe(32)
     monkeypatch.setenv("OPENAI_API_KEY", environment)
+    monkeypatch.setenv("GEMINI_API_KEY", gemini)
     get_settings.cache_clear()
     assert client.get("/api/owner/ai-settings").json()["credential_source"] == "environment"
     assert save_key(client, database).status_code == 200
     assert controls(client, text="gpt-5-nano", transcription="gpt-4o-transcribe").status_code == 200
     with Session(client.engine) as db:
-        for factory in [get_question_provider, get_evaluation_provider, get_transcription_provider]:
-            provider = factory(db)
-            selected = provider.settings.openai_api_key.get_secret_value() == database
-            assert selected
-            assert provider.settings.openai_model == "gpt-5-nano"
-            assert provider.settings.openai_transcription_model == "gpt-4o-transcribe"
+        question_provider = get_question_provider(db)
+        evaluation_provider = get_evaluation_provider(db)
+        assert question_provider.settings.gemini_api_key.get_secret_value() == gemini
+        assert evaluation_provider.settings.gemini_api_key.get_secret_value() == gemini
+        transcription_provider = get_transcription_provider(db)
+        assert transcription_provider.settings.openai_api_key.get_secret_value() == database
+        assert transcription_provider.settings.openai_model == "gpt-5-nano"
+        assert transcription_provider.settings.openai_transcription_model == "gpt-4o-transcribe"
     assert controls(client, enabled=False).status_code == 200
     assert client.get("/api/interviews/capabilities").json() == {
         "ai_available": False,
+        "gemini_model": "gemini-3.1-flash-lite",
         "transcription_available": False,
     }
     with Session(client.engine) as db:
@@ -103,6 +108,7 @@ def test_resolution_priority_removal_environment_fallback_and_disable(
     assert client.request("DELETE", "/api/owner/ai-settings/key").json()["enabled"] is False
     assert controls(client, enabled=True).json()["credential_source"] == "environment"
     monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setenv("GEMINI_API_KEY", "")
     get_settings.cache_clear()
     assert client.get("/api/owner/ai-settings").json()["fallback_active"]
     assert client.get("/api/interviews/capabilities").json()["ai_available"] is False
@@ -115,13 +121,13 @@ def test_resolution_priority_removal_environment_fallback_and_disable(
     )
 
 
-def test_replacement_used_on_next_provider_request_without_restart(client, configured_owner):
+def test_openai_key_replacement_only_updates_optional_transcription(client, configured_owner):
     first, second = fake_key(), fake_key()
     save_key(client, first)
     with Session(client.engine) as db:
-        initial = get_question_provider(db)
+        initial = get_transcription_provider(db)
         save_key(client, second)
-        updated = get_question_provider(db)
+        updated = get_transcription_provider(db)
         changed = (
             initial.settings.openai_api_key.get_secret_value() == first
             and updated.settings.openai_api_key.get_secret_value() == second
@@ -300,3 +306,28 @@ def test_model_toggle_remove_audits_and_probe_rate_limit(client, configured_owne
     for _ in range(3):
         assert client.post("/api/owner/ai-settings/test").status_code == 200
     assert client.post("/api/owner/ai-settings/test").status_code == 429
+
+
+def test_gemini_status_and_deliberate_synthetic_probe(client, configured_owner, monkeypatch):
+    save_key(client, fake_key())
+    assert not client.get("/api/owner/ai-settings").json()["gemini_configured"]
+    assert client.post("/api/owner/ai-settings/test-gemini").json()["status"] == "not_configured"
+    monkeypatch.setenv("GEMINI_API_KEY", "synthetic-gemini-key")
+    get_settings.cache_clear()
+    calls = []
+
+    def probe(settings):
+        calls.append(settings.gemini_model)
+        return "connected"
+
+    monkeypatch.setattr("app.services.provider_connection.test_gemini_connection", probe)
+    assert client.get("/api/owner/ai-settings").json()["gemini_available"]
+    assert client.post("/api/owner/ai-settings/test-gemini").json()["status"] == "connected"
+    assert calls == ["gemini-3.1-flash-lite"]
+    persisted = client.get("/api/owner/ai-settings").json()
+    assert persisted["gemini_last_test_status"] == "connected"
+    assert persisted["gemini_last_test_at"]
+    controls(client, enabled=False)
+    assert not client.get("/api/interviews/capabilities").json()["ai_available"]
+    assert client.post("/api/owner/ai-settings/test-gemini").json()["status"] == "disabled"
+    assert len(calls) == 1

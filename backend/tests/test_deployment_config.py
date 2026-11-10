@@ -86,3 +86,110 @@ def test_hosting_preparation_has_no_automatic_deployment_or_credentials():
         assert environments[name] == {"key": name, "sync": False}
     frontend = json.loads((ROOT / "frontend/vercel.json").read_text(encoding="utf-8"))
     assert frontend["framework"] == "nextjs" and frontend["buildCommand"] == "npm run build"
+    assert frontend["git"]["deploymentEnabled"] is False
+
+
+def test_verified_gemini_model_and_bounded_timeout_are_prepared_for_render():
+    configuration = yaml.safe_load((ROOT / "render.yaml").read_text(encoding="utf-8"))
+    env = {item["key"]: item for item in configuration["services"][0]["envVars"]}
+    assert env["GEMINI_MODEL"]["value"] == "gemini-3.1-flash-lite"
+    assert env["GEMINI_API_KEY"] == {"key": "GEMINI_API_KEY", "sync": False}
+    assert int(env["AI_TIMEOUT_SECONDS"]["value"]) == 30
+
+
+def test_production_rejects_local_database_without_disclosing_credentials():
+    import pytest
+    from pydantic import ValidationError
+
+    from app.core.config import Settings
+
+    for field in ("database_url", "migration_database_url"):
+        for host in (
+            "127.0.0.1",
+            "127.2.3.4",
+            "localhost",
+            "[::1]",
+            "0.0.0.0",
+            "host.docker.internal",
+            "db.localhost",
+        ):
+            url = f"postgresql+psycopg://user:synthetic-private-value@{host}:55432/development"
+            with pytest.raises(ValidationError) as exc:
+                Settings(_env_file=None, app_env="production", **{field: url})
+            assert "synthetic-private-value" not in str(exc.value)
+        with pytest.raises(ValidationError):
+            Settings(
+                _env_file=None,
+                app_env="production",
+                **{field: "postgresql+psycopg:///development"},
+            )
+    settings = Settings(
+        _env_file=None,
+        app_env="development",
+        database_url="postgresql+psycopg://user:synthetic@127.0.0.1:55432/development",
+    )
+    assert settings.database_url
+    Settings(
+        _env_file=None,
+        app_env="production",
+        database_url="postgresql+psycopg://user:synthetic@db.example.test/production?sslmode=require",
+    )
+
+
+def test_offline_production_check_validates_hosting_without_network():
+    from cryptography.fernet import Fernet
+
+    from app.core.config import Settings
+    from app.release_check import blockers
+
+    def check(settings):
+        return blockers(settings, require_ai=True, verify_topology=True, verify_crypto=True)
+
+    settings = Settings(
+        _env_file=None,
+        app_env="production",
+        database_url="postgresql+psycopg://user:synthetic@ep-example-pooler.neon.tech/app?sslmode=require",
+        migration_database_url="postgresql+psycopg://user:synthetic@ep-example.neon.tech/app?sslmode=require",
+        jwt_secret="synthetic-production-signing-value-for-tests",
+        settings_encryption_key=Fernet.generate_key().decode(),
+        gemini_api_key="synthetic-gemini-test-key",
+        gemini_model="gemini-3.1-flash-lite",
+        frontend_origins=["https://ai-interview-platform-one-mu.vercel.app"],
+        storage_backend="s3",
+        s3_bucket="synthetic-private-bucket",
+        s3_endpoint_url="https://example.storage.supabase.co/storage/v1/s3",
+        s3_access_key_id="synthetic-access",
+        s3_secret_access_key="synthetic-secret",
+    )
+    assert check(settings) == []
+    invalid = settings.model_copy(update={"database_url": None, "storage_backend": "local"})
+    assert "DATABASE_URL" in check(invalid)
+    assert "durable private S3 storage configuration" in check(invalid)
+
+
+def test_release_guard_catches_example_credentials_without_printing_them():
+    import importlib.util
+    import secrets
+
+    spec = importlib.util.spec_from_file_location(
+        "release_check", ROOT / "scripts/check_release.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    credential = secrets.token_urlsafe(32)
+    issues = module.issues_for("backend/.env.example", "GEMINI_API_KEY=" + credential)
+    assert issues and all(credential not in issue for issue in issues)
+    assert (
+        module.issues_for(
+            "backend/.env.example", "GEMINI_API_KEY=\nGEMINI_MODEL=gemini-3.1-flash-lite\n"
+        )
+        == []
+    )
+    assert module.issues_for("backend/.env", "")
+    assert (
+        module.issues_for(
+            "backend/.env.example",
+            "DATABASE_URL=postgresql+psycopg://USERNAME:PASSWORD@localhost/app",
+        )
+        == []
+    )

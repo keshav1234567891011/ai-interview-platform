@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, SecretStr, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
 TextModel = Literal["gpt-5-mini", "gpt-5-nano"]
 TranscriptionModel = Literal["gpt-4o-mini-transcribe", "gpt-4o-transcribe"]
@@ -42,6 +42,12 @@ class APIKeyReplace(BaseModel):
 
 
 class AISettingsResponse(BaseModel):
+    gemini_configured: bool = False
+    gemini_model: str = "gemini-3.1-flash-lite"
+    gemini_available: bool = False
+    gemini_diagnostics: list[dict] = Field(default_factory=list)
+    gemini_last_test_status: str | None = None
+    gemini_last_test_at: datetime | None = None
     enabled: bool
     configured: bool
     database_key_present: bool
@@ -58,8 +64,11 @@ class AISettingsResponse(BaseModel):
 
 
 class ConnectionResult(BaseModel):
+    model: str | None = None
     status: Literal[
         "connected",
+        "timeout",
+        "request_rejected",
         "authentication_failed",
         "rate_limited",
         "provider_unavailable",

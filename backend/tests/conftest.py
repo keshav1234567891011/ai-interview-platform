@@ -17,6 +17,11 @@ from app.main import create_app
 def isolated_configuration(monkeypatch):
     """Local developer secrets must never change isolated test expectations."""
     monkeypatch.setitem(Settings.model_config, "env_file", None)
+
+    def blocked_client(*args, **kwargs):
+        raise AssertionError("Real Gemini calls are forbidden in tests; mock genai.Client")
+
+    monkeypatch.setattr("app.services.ai_provider.genai.Client", blocked_client)
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
@@ -55,6 +60,7 @@ class ApiClient:
 def client(monkeypatch):
     monkeypatch.setenv("APP_ENV", "test")
     monkeypatch.setenv("OPENAI_API_KEY", "")
+    monkeypatch.setenv("GEMINI_API_KEY", "")
     monkeypatch.setenv("JWT_SECRET", secrets.token_urlsafe(48))
     get_settings.cache_clear()
     engine = create_engine(

@@ -5,11 +5,14 @@ from datetime import UTC, datetime
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import HTTPException
 from pydantic import SecretStr
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.models.administration import AuditEvent
 from app.models.ai_settings import AISettings
 from app.schemas.ai_settings import AISettingsResponse
+from app.services.ai_diagnostics import recent_diagnostics
 
 
 def cipher() -> Fernet:
@@ -67,7 +70,28 @@ def resolved(db: Session | None = None):
             else settings.openai_transcription_model,
         }
     )
+    from app.services.ai_provider import gemini_enabled
+
+    latest_test = (
+        db.scalar(
+            select(AuditEvent)
+            .where(
+                AuditEvent.action == "gemini_connection_tested",
+                AuditEvent.details["model"].as_string() == settings.gemini_model,
+            )
+            .order_by(AuditEvent.created_at.desc())
+            .limit(1)
+        )
+        if db is not None
+        else None
+    )
     status = AISettingsResponse(
+        gemini_diagnostics=recent_diagnostics(db),
+        gemini_last_test_status=latest_test.details.get("status") if latest_test else None,
+        gemini_last_test_at=latest_test.created_at if latest_test else None,
+        gemini_configured=usable(settings.gemini_api_key),
+        gemini_model=settings.gemini_model,
+        gemini_available=gemini_enabled(db),
         enabled=enabled,
         configured=source != "none",
         database_key_present=bool(record and record.encrypted_api_key),

@@ -28,6 +28,13 @@ def main():
     Settings.model_config["env_file"] = None
     os.environ["APP_ENV"] = "test"
     os.environ["OPENAI_API_KEY"] = ""
+    os.environ["GEMINI_API_KEY"] = ""
+    from google import genai
+
+    def forbid_live_gemini(*args, **kwargs):
+        raise AssertionError("Live Gemini calls are forbidden in acceptance tests")
+
+    genai.Client = forbid_live_gemini
     os.environ["JWT_SECRET"] = secrets.token_urlsafe(48)
     os.environ["SETTINGS_ENCRYPTION_KEY"] = Fernet.generate_key().decode()
     get_settings.cache_clear()
@@ -65,7 +72,11 @@ def main():
     )  # Metadata transport is deliberately mocked.
     server = uvicorn.Server(
         uvicorn.Config(
-            application, host="127.0.0.1", port=0, log_level="critical", access_log=False
+            application,
+            host="127.0.0.1",
+            port=0,
+            log_level="critical",
+            access_log=False,
         )
     )
     worker = threading.Thread(target=server.run, daemon=True)
@@ -89,8 +100,9 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except BaseException:
+    except BaseException:  # noqa: BLE001 -- keep acceptance failures free of private details
         print(
-            "Isolated owner acceptance server stopped; private details suppressed.", file=sys.stderr
+            "Isolated owner acceptance server stopped; private details suppressed.",
+            file=sys.stderr,
         )
         sys.exit(1)

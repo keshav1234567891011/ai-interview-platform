@@ -16,9 +16,11 @@ class RubricEvaluation(BaseModel):
     communication_score: int = Field(ge=0, le=100)
     strengths: list[FeedbackItem] = Field(max_length=6)
     weaknesses: list[FeedbackItem] = Field(max_length=6)
+    concepts_covered: list[FeedbackItem] = Field(default_factory=list, max_length=12)
     concepts_missed: list[FeedbackItem] = Field(max_length=12)
     feedback: str = Field(min_length=10, max_length=1500)
     improvement_suggestion: str = Field(min_length=10, max_length=1500)
+    sample_answer: str = Field(min_length=10, max_length=2000)
 
 
 class CommunicationSignals(BaseModel):
@@ -36,4 +38,6 @@ class CommunicationSignals(BaseModel):
 class EvaluationResponse(RubricEvaluation):
     score: int = Field(ge=0, le=100)
     source: Literal["deterministic", "ai"]
+    fallback_reason: str | None = None
+    provider_model: str | None = None
     communication: CommunicationSignals

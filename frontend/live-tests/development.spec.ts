@@ -135,7 +135,7 @@ test("real browser account, profile, logout, and curated interview persist in Po
     await page.getByLabel("Target role").selectOption("Backend Developer");
     await page.getByLabel("Difficulty", { exact: true }).selectOption("Beginner");
     await page.getByLabel("Questions", { exact: true }).selectOption("3");
-    await expect(page.getByRole("checkbox", { name: "Use AI-assisted questions" })).not.toBeChecked();
+    await expect(page.getByRole("checkbox", { name: "Use Gemini AI questions and feedback" })).not.toBeChecked();
     passed();
     stage = "deterministic interview creation";
     const created = page.waitForResponse(r => r.url().endsWith("/api/interviews") && r.request().method() === "POST");

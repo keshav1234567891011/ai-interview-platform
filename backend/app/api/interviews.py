@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy import select
 
 from app.api.dependencies import CurrentUser, DbSession
-from app.core.rate_limit import processing_budget
+from app.core.config import get_settings
+from app.core.rate_limit import gemini_budget, processing_budget
 from app.models.interview import Interview, InterviewAnswer
 from app.schemas.interview import (
     AnswerRequest,
@@ -15,6 +16,7 @@ from app.schemas.interview import (
     InterviewSummary,
 )
 from app.services.adaptive_questions import prepare_question
+from app.services.ai_diagnostics import SERVICE_FAILURES, configuration_reason, record_fallback
 from app.services.ai_provider import QuestionProvider, ai_configured, get_question_provider
 from app.services.evaluation import (
     EvaluationProvider,
@@ -45,7 +47,11 @@ Transcriber = Annotated[TranscriptionProvider | None, Depends(get_transcription_
 @router.get("/capabilities")
 def interview_capabilities(user: CurrentUser, db: DbSession):
     available = ai_configured(db)
-    return {"ai_available": available, "transcription_available": available}
+    return {
+        "ai_available": available,
+        "gemini_model": get_settings().gemini_model,
+        "transcription_available": get_transcription_provider(db) is not None,
+    }
 
 
 @router.get("", response_model=list[InterviewSummary])
@@ -77,15 +83,53 @@ def get_interview(interview_id: UUID, user: CurrentUser, db: DbSession):
 @router.post("/{interview_id}/start", response_model=InterviewResponse)
 def start_interview(interview_id: UUID, user: CurrentUser, db: DbSession, provider: Provider):
     processing_budget(db, user.id)
+    preflight = owned_interview(db, user.id, interview_id)
+    if preflight.status not in {"created", "in_progress"}:
+        raise HTTPException(409, "This session is already closed")
+    if preflight.status == "in_progress":
+        return session_response(preflight)
+    reason = configuration_reason(db)
+    if provider and preflight.ai_enabled:
+        try:
+            permitted = gemini_budget(db, user.id)
+        except HTTPException as exc:
+            if exc.status_code == 429:
+                record_fallback(db, "pacing", "budget_minute")
+                db.commit()
+            raise
+        if not permitted:
+            provider, reason = None, "budget_daily"
     interview = owned_interview(db, user.id, interview_id, lock=True)
     if interview.status not in {"created", "in_progress"}:
         raise HTTPException(409, "This session is already closed")
     if interview.status == "created":
         interview.status = "in_progress"
         interview.started_at = now()
-        prepare_question(db, interview, interview.questions[0], provider)
+        prepare_question(db, interview, interview.questions[0], provider, fallback_reason=reason)
         db.commit()
     return session_response(interview)
+
+
+def active_question(interview, question_id):
+    if interview.status != "in_progress":
+        raise HTTPException(409, "Only an active interview accepts answers")
+    current = next(
+        (q for q in interview.questions if not q.answer or not q.answer.answered_at), None
+    )
+    if not current or current.id != question_id:
+        raise HTTPException(409, "Answer the current question before moving forward")
+    return current
+
+
+def write_answer(current, payload):
+    if not current.answer:
+        current.answer = InterviewAnswer(answer_text=payload.answer_text)
+    current.answer.answer_text = payload.answer_text
+    current.answer.updated_at = now()
+    current.answer.input_mode = payload.input_mode
+    current.answer.recording_duration_seconds = (
+        payload.recording_duration_seconds if payload.input_mode == "voice" else None
+    )
 
 
 @router.put("/{interview_id}/questions/{question_id}/answer", response_model=InterviewResponse)
@@ -100,33 +144,53 @@ def answer_question(
 ):
     if payload.submit:
         processing_budget(db, user.id)
-    interview = owned_interview(db, user.id, interview_id, lock=True)
-    if interview.status != "in_progress":
-        raise HTTPException(409, "Only an active interview accepts answers")
-    current = next(
-        (q for q in interview.questions if not q.answer or not q.answer.answered_at), None
-    )
-    if not current or current.id != question_id:
-        raise HTTPException(409, "Answer the current question before moving forward")
+    preflight = owned_interview(db, user.id, interview_id)
+    active_question(preflight, question_id)
     if payload.submit and not payload.answer_text:
         raise HTTPException(422, "Write an answer before submitting")
-    if not current.answer:
-        current.answer = InterviewAnswer(answer_text=payload.answer_text)
-    current.answer.answer_text = payload.answer_text
-    current.answer.updated_at = now()
-    current.answer.input_mode = payload.input_mode
-    current.answer.recording_duration_seconds = (
-        payload.recording_duration_seconds if payload.input_mode == "voice" else None
-    )
+    reason = configuration_reason(db) if preflight.ai_enabled else "not_requested"
+    if payload.submit and preflight.ai_enabled and (provider or evaluator):
+        try:
+            permitted = gemini_budget(db, user.id)
+        except HTTPException as exc:
+            if exc.status_code != 429:
+                raise
+            # Reserve commits only quota data before taking the business-row lock.
+            # A paced submission remains a recoverable draft, without an evaluation or AI call.
+            interview = owned_interview(db, user.id, interview_id, lock=True)
+            current = active_question(interview, question_id)
+            write_answer(current, payload)
+            record_fallback(db, "pacing", "budget_minute")
+            db.commit()
+            raise HTTPException(
+                429, exc.detail + " Your answer is saved as a draft.", headers=exc.headers
+            ) from None
+        if not permitted:
+            provider = evaluator = None
+            reason = "budget_daily"
+    interview = owned_interview(db, user.id, interview_id, lock=True)
+    current = active_question(interview, question_id)
+    write_answer(current, payload)
     if payload.submit:
         current.answer.answered_at = now()
-        persist_evaluation(current, evaluator if interview.ai_enabled else None)
+        evaluation = persist_evaluation(
+            current, evaluator if interview.ai_enabled else None, fallback_reason=reason, db=db
+        )
         if current.sequence == interview.question_count:
             interview.status = "completed"
             interview.completed_at = now()
         else:
+            # A quota/auth/network failure is shared by both Gemini operations in this turn.
+            # Keep the bank question rather than immediately sending another failing request.
+            if evaluation.fallback_reason in SERVICE_FAILURES:
+                provider, reason = None, evaluation.fallback_reason
             prepare_question(
-                db, interview, interview.questions[current.sequence], provider, payload.answer_text
+                db,
+                interview,
+                interview.questions[current.sequence],
+                provider,
+                payload.answer_text,
+                fallback_reason=reason,
             )
     db.commit()
     return session_response(interview)
@@ -140,7 +204,7 @@ def interview_results(interview_id: UUID, user: CurrentUser, db: DbSession):
     # Older completed sessions are upgraded conservatively without making paid calls.
     for question in interview.questions:
         if question.answer and question.answer.answered_at and not question.evaluation:
-            persist_evaluation(question)
+            persist_evaluation(question, fallback_reason="legacy_baseline")
     db.commit()
     return {
         "interview": session_response(interview),
@@ -150,6 +214,7 @@ def interview_results(interview_id: UUID, user: CurrentUser, db: DbSession):
                 "id": q.id,
                 "sequence": q.sequence,
                 "question": q.question_text,
+                "question_source": q.source,
                 "category": q.category,
                 "answer": q.answer.answer_text,
                 "input_mode": q.answer.input_mode,

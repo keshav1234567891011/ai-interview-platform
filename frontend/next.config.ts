@@ -23,6 +23,9 @@ function backendDestination(): string {
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // An answer can evaluate and then generate a follow-up, each bounded to 30s.
+  // Keep the local/container rewrite alive long enough to return that saved result.
+  experimental: { proxyTimeout: 75_000 },
   outputFileTracingRoot: path.dirname(process.cwd()),
   poweredByHeader: false,
   async headers() {

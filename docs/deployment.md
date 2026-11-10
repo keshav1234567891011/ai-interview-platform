@@ -18,8 +18,10 @@ Use `backend/.env.example` and `frontend/.env.example` as formats only. Actual f
 | `JWT_ALGORITHM=HS256` | Only supported pinned algorithm |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Session lifetime, default 30 |
 | `FRONTEND_ORIGINS` | JSON list of exact frontend HTTPS origins |
-| `OPENAI_API_KEY` | Optional server-only key; empty preserves deterministic operation |
-| `OPENAI_MODEL`, `AI_TIMEOUT_SECONDS` | Optional generation/evaluation model and bounded provider timeout |
+| `GEMINI_API_KEY` | Optional server-only Google AI Studio key; empty preserves deterministic interview operation |
+| `GEMINI_MODEL=gemini-3.1-flash-lite` | Backend-only verified model; no automatic switching |
+| `AI_TIMEOUT_SECONDS` | Bounded provider timeout (1?30 seconds) |
+| `OPENAI_API_KEY`, `OPENAI_MODEL` | Optional legacy OpenAI settings; unrelated to Gemini credentials |
 | `STORAGE_DIRECTORY=runtime/uploads` | Backend-relative resume directory, mounted durably |
 | `BACKEND_API_URL` | Frontend **build-time** server-only backend destination |
 
@@ -89,3 +91,5 @@ The named `resume_data` volume persists single-host files. Back it up; do not re
 ## Owner setup
 
 After reviewed migration upgrade, configure `OWNER_BOOTSTRAP_EMAIL` and a private temporary `OWNER_BOOTSTRAP_PASSWORD` in the backend environment and run `python -m app.cli bootstrap-owner` using the backend environment/container. The command is idempotent and refuses a different existing owner. Sign in through HTTPS and perform the mandatory first password change, then remove the bootstrap password from deployment configuration. Do not automatically run bootstrap with a newly generated password on every deployment. Existing administrator permissions must be explicitly reviewed and assigned by the owner. See [owner security and delegation](owner-control-center.md).
+
+The current release keeps automatic Git deployment disabled in Vercel configuration. Use the [existing-service deployment procedure](release-deployment.md), preserve valid production secrets, and complete the [credential rotations](credential-rotation.md) before release.

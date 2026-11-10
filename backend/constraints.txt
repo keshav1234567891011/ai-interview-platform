@@ -59,3 +59,13 @@ python-dateutil==2.9.0.post0
 s3transfer==0.19.3
 six==1.17.0
 urllib3==2.8.0
+
+# Official Gemini SDK, verified with Python 3.14.
+google-genai==1.75.0
+google-auth==2.62.0
+charset-normalizer==3.5.2
+pyasn1==0.6.5
+pyasn1_modules==0.4.2
+requests==2.34.2
+tenacity==9.1.4
+websockets==16.1.1

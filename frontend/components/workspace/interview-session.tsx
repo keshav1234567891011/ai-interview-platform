@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, LoaderCircle, Save } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { useResource } from "@/lib/use-resource";
 import { readable, type Interview, type Question } from "@/lib/interview-types";
 import { Card } from "../ui/card";
@@ -211,6 +211,12 @@ function AnswerEditor({
   question: Question;
   onUpdate: (value: Interview) => void;
 }) {
+  const [waitSeconds, setWaitSeconds] = useState(0);
+  useEffect(() => {
+    if (waitSeconds <= 0) return;
+    const timer = setTimeout(() => setWaitSeconds(value => Math.max(0, value - 1)), 1000);
+    return () => clearTimeout(timer);
+  }, [waitSeconds]);
   const [draft, setDraft] = useState(question.answer_text);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -254,6 +260,7 @@ function AnswerEditor({
     };
   }, [dirty]);
   async function save(submit: boolean) {
+    if (submit && waitSeconds > 0) return;
     setBusy(true);
     setError("");
     setSaved(false);
@@ -274,6 +281,11 @@ function AnswerEditor({
         setSaved(true);
       }
     } catch (err) {
+      if (err instanceof ApiError && err.aiReason === "budget_minute") {
+        setWaitSeconds(Math.max(1, Math.min(60, err.retryAfter || 60)));
+        setSaved(true);
+        await api<Interview>(`/interviews/${interview.id}`).then(onUpdate).catch(() => {});
+      }
       setError(
         err instanceof Error ? err.message : "Your answer could not be saved.",
       );
@@ -291,9 +303,9 @@ function AnswerEditor({
         </span>
       </div>
       <p className="question-origin">
-        {question.source === "ai" ? "AI-assisted question" : "Curated question"}
+        {question.source === "ai" ? "Gemini AI question" : interview.ai_enabled ? "Curated question / Deterministic fallback question" : "Curated question"}
         {interview.ai_enabled && question.sequence > 1
-          ? " · Difficulty guided by answer detail; this is not a score."
+          ? " · Follow-ups use technical feedback when available, otherwise baseline answer detail; this is not a score."
           : ""}
       </p>
       <h2 tabIndex={-1} ref={heading}>
@@ -342,6 +354,7 @@ function AnswerEditor({
             {error}
           </p>
         )}
+        {waitSeconds > 0 && <p role="status">Gemini pacing: retry in {waitSeconds}s. Your answer is saved as a draft.</p>}
         <div className="form-actions">
           <Button
             type="button"
@@ -352,7 +365,7 @@ function AnswerEditor({
             <Save size={15} aria-hidden="true" />
             Save draft
           </Button>
-          <Button type="submit" disabled={busy || recording || !draft.trim()}>
+          <Button type="submit" disabled={busy || recording || waitSeconds > 0 || !draft.trim()}>
             {busy ? (
               <LoaderCircle className="spin" size={16} aria-hidden="true" />
             ) : (
@@ -363,7 +376,7 @@ function AnswerEditor({
                 question.sequence < interview.question_count
                 ? "Preparing next question…"
                 : "Saving your answer…"
-              : question.sequence === interview.question_count
+              : waitSeconds > 0 ? `Retry in ${waitSeconds}s` : question.sequence === interview.question_count
                 ? "Finish interview"
                 : "Save & next"}
           </Button>

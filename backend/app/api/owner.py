@@ -92,7 +92,7 @@ def remove_ai_key(owner: CurrentOwner, db: DbSession):
     return resolved(db)[1]
 
 
-@router.post("/ai-settings/test", response_model=ConnectionResult)
+@router.post("/ai-settings/test", response_model=ConnectionResult, response_model_exclude_none=True)
 def test_ai_connection(owner: CurrentOwner, db: DbSession):
     if get_settings().app_env != "test":
         reserve(db, "owner-ai-connection", str(owner.id), 3, 60)
@@ -219,3 +219,29 @@ def revoke(id: UUID, owner: CurrentOwner, db: DbSession):
     audit(db, owner, target, "admin_revoked")
     db.commit()
     return target
+
+
+@router.post("/ai-settings/test-gemini", response_model=ConnectionResult)
+def test_gemini(owner: CurrentOwner, db: DbSession):
+    from app.services.ai_provider import gemini_enabled
+    from app.services.provider_connection import test_gemini_connection
+
+    if get_settings().app_env != "test":
+        reserve(db, "owner-gemini-test", str(owner.id), 2, 60)
+    status = resolved(db)[1]
+    if not status.enabled:
+        return ConnectionResult(status="disabled", model=get_settings().gemini_model)
+    if not gemini_enabled(db):
+        return ConnectionResult(status="not_configured", model=get_settings().gemini_model)
+    settings = get_settings()
+    result = test_gemini_connection(settings)
+    db.add(
+        AuditEvent(
+            actor_id=owner.id,
+            target_id=owner.id,
+            action="gemini_connection_tested",
+            details={"model": settings.gemini_model, "status": result},
+        )
+    )
+    db.commit()
+    return ConnectionResult(status=result, model=settings.gemini_model)

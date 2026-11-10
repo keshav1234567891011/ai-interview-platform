@@ -47,3 +47,16 @@ Desktop.ini
 frontend/test-results/
 frontend/live-test-results/
 frontend/playwright-report/
+
+# Local temporary execution artifacts.
+.runtime-tmp/
+
+# Private credential stores and certificate bundles.
+.aws/
+.codex/auth.json
+.netrc
+*.p12
+*.pfx
+
+# Hosting account metadata and pulled environment secrets.
+.vercel/

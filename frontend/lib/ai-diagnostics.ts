@@ -1,0 +1,16 @@
+export const aiReasonLabels: Record<string, string> = {
+  budget_minute: "Local AI pacing limit; wait before submitting",
+  budget_daily: "Daily AI practice budget reached",
+  quota: "Gemini quota exhausted or rate limited",
+  timeout: "Gemini response timed out",
+  network: "Gemini network connection failed",
+  authentication: "Gemini credential was rejected",
+  model_unavailable: "Configured model unavailable",
+  request_rejected: "Gemini rejected the request",
+  invalid_output: "Gemini returned invalid structured output",
+  provider_error: "Gemini provider error",
+  disabled: "AI provider disabled by the owner",
+  not_configured: "Gemini credentials unavailable",
+  legacy_baseline: "Baseline generated for an older completed interview",
+  not_requested: "Gemini was not enabled for this interview",
+};

@@ -1,15 +1,17 @@
 """Read-only release preflight; reports names of missing controls, never values."""
 
 import sys
+from urllib.parse import urlsplit
 
+from cryptography.fernet import Fernet
 from sqlalchemy.engine import make_url
 
-from app.core.config import get_settings
-from app.core.security import signing_key
-from app.services.ai_settings import cipher
+from app.core.config import Settings
 
 
-def blockers(settings) -> list[str]:
+def blockers(
+    settings, *, require_ai=False, verify_topology=False, verify_crypto=False
+) -> list[str]:
     missing = []
     if settings.app_env != "production":
         missing.append("APP_ENV=production")
@@ -39,20 +41,43 @@ def blockers(settings) -> list[str]:
         missing.append("durable private S3 storage configuration")
     if settings.owner_bootstrap_password and settings.owner_bootstrap_password.get_secret_value():
         missing.append("remove obsolete OWNER_BOOTSTRAP_PASSWORD after setup")
+    if require_ai:
+        key = settings.gemini_api_key.get_secret_value() if settings.gemini_api_key else ""
+        if not key.strip() or key.startswith("REPLACE_"):
+            missing.append("GEMINI_API_KEY for AI interviews")
+        if settings.gemini_model != "gemini-3.1-flash-lite":
+            missing.append("GEMINI_MODEL=gemini-3.1-flash-lite")
+    if verify_topology:
+        for name, value in (
+            ("DATABASE_URL", settings.database_url),
+            ("MIGRATION_DATABASE_URL", settings.migration_database_url),
+        ):
+            if value and not (make_url(value.get_secret_value()).host or "").endswith(".neon.tech"):
+                missing.append(name + " must use the production Neon host")
+        endpoint = urlsplit(settings.s3_endpoint_url or "")
+        if (
+            not (endpoint.hostname or "").endswith(".supabase.co")
+            or endpoint.path.rstrip("/") != "/storage/v1/s3"
+        ):
+            missing.append("S3_ENDPOINT_URL for the existing Supabase storage")
+        if "https://ai-interview-platform-one-mu.vercel.app" not in settings.frontend_origins:
+            missing.append("FRONTEND_ORIGINS must include the existing Vercel application")
+    if verify_crypto:
+        key = settings.jwt_secret.get_secret_value() if settings.jwt_secret else ""
+        if len(key) < 32 or key.startswith("REPLACE_"):
+            missing.append("valid JWT_SECRET")
+        try:
+            Fernet(settings.settings_encryption_key.get_secret_value().encode())
+        except Exception:
+            missing.append("valid SETTINGS_ENCRYPTION_KEY")
     return missing
 
 
 def main():
     try:
-        missing = blockers(get_settings())
-        try:
-            signing_key()
-        except Exception:
-            missing.append("valid JWT_SECRET")
-        try:
-            cipher()
-        except Exception:
-            missing.append("valid SETTINGS_ENCRYPTION_KEY")
+        # Check deployment variables only, without reading a workstation's private .env.
+        settings = Settings(_env_file=None)
+        missing = blockers(settings, require_ai=True, verify_topology=True, verify_crypto=True)
         if missing:
             print("Release preflight BLOCKED: " + "; ".join(missing))
             return 1

@@ -77,3 +77,30 @@ def processing_budget(db: Session, user_id, *, audio=False) -> None:
     scope = "transcription" if audio else "interview-processing"
     reserve(db, scope, str(user_id), 6 if audio else 30, 60)
     reserve(db, scope, str(user_id), 100 if audio else 300, 86400)
+
+
+def gemini_budget(db: Session, user_id) -> bool:
+    """Preserve 2 turns/minute, 20/day. Pace short bursts; daily exhaustion falls back."""
+    if get_settings().app_env == "test":
+        return True
+    daily = db.get(RateLimitBucket, bucket_key("gemini-turns", str(user_id), 86400))
+    if daily and daily.window_start >= int(time.time()) // 86400 * 86400 and daily.count >= 20:
+        return False
+    try:
+        reserve(db, "gemini-turns", str(user_id), 2, 60)
+    except HTTPException as exc:
+        if exc.status_code != 429:
+            raise
+        delay = exc.headers["Retry-After"]
+        raise HTTPException(
+            429,
+            f"Gemini pacing limit reached. Wait {delay} seconds before submitting again.",
+            headers={**exc.headers, "X-InterviewAI-AI-Reason": "budget_minute"},
+        ) from None
+    try:
+        reserve(db, "gemini-turns", str(user_id), 20, 86400)
+        return True
+    except HTTPException as exc:
+        if exc.status_code != 429:
+            raise
+        return False

@@ -180,12 +180,12 @@ function SetupForm({
                   aria-describedby="ai-privacy"
                   disabled={busy || !aiAvailable}
                 />{" "}
-                Use AI-assisted questions
+                Use Gemini AI questions and feedback
               </label>
               <p id="ai-privacy">
                 {aiAvailable
-                  ? "Optional. Your skills, summary, bounded resume/job excerpts, and recent answers will be sent to OpenAI to prepare questions and concise evaluation feedback. Curated questions and baseline feedback remain the fallback."
-                  : "Curated questions are ready to use. AI assistance becomes available when your server is configured."}
+                  ? "Optional consent: your role, skills, profile summary, bounded resume and job excerpts, interview questions, and recent answers will be sent to the server-configured Google Gemini model for questions, adaptive follow-ups, and evaluation. You can leave this unchecked to keep all candidate content on this server. Gemini free-tier quotas apply; curated questions and baseline feedback remain available if Gemini is unavailable."
+                  : "Gemini AI is not configured on the server. Curated questions and baseline feedback remain available."}
               </p>
             </div>
             <p className="panel-copy">

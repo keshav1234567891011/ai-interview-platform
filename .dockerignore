@@ -33,3 +33,12 @@ frontend/playwright.config.ts
 frontend/playwright.live.config.ts
 .idea
 .vscode
+
+# Local temporary execution artifacts.
+.runtime-tmp/
+
+**/*.p12
+**/*.pfx
+
+# Hosting account metadata and pulled environment secrets.
+.vercel/

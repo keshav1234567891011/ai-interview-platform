@@ -2,6 +2,8 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public retryAfter?: number,
+    public aiReason?: string,
   ) {
     super(message);
   }
@@ -24,6 +26,8 @@ export async function api<T>(
       cache: "no-store",
     });
   } catch {
+    if (options.signal?.aborted)
+      throw new ApiError(0, "The request timed out. Please try again later.");
     throw new ApiError(0, "We couldn’t reach the server. Please try again.");
   }
   if (!response.ok) {
@@ -36,7 +40,9 @@ export async function api<T>(
         : Array.isArray(data.detail)
           ? data.detail.map((item: { msg: string }) => item.msg).join(". ")
           : "Something went wrong. Please try again.";
-    throw new ApiError(response.status, message);
+    const retry = Number(response.headers.get("Retry-After"));
+    throw new ApiError(response.status, message, Number.isFinite(retry) && retry > 0 ? retry : undefined,
+      response.headers.get("X-InterviewAI-AI-Reason") || undefined);
   }
   return response.status === 204 ? (undefined as T) : response.json();
 }

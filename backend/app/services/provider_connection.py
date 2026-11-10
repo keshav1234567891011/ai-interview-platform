@@ -1,4 +1,4 @@
-"""Explicit metadata-only connection probe: no generation or transcription call."""
+"""Separate OpenAI metadata and synthetic Gemini generation connection probes."""
 
 import httpx
 
@@ -33,4 +33,43 @@ def test_connection(settings) -> str:
             return "connected"
     except Exception:
         # No provider body, request, exception, header or URL is logged or returned.
+        return "provider_unavailable"
+
+
+def test_gemini_connection(settings) -> str:
+    """Deliberate synthetic generation; never uses candidate data."""
+    from google.genai import errors
+
+    from app.services.ai_provider import CandidateContext, GeminiQuestionProvider
+
+    try:
+        GeminiQuestionProvider(settings).generate(
+            CandidateContext(
+                role="Backend Developer",
+                difficulty="Beginner",
+                focus_areas=["sql"],
+                skills=["sql"],
+                profile_summary="",
+                resume_excerpt="",
+                job_excerpt="",
+                previous_questions=[],
+                previous_answers=[],
+            )
+        )
+        return "connected"
+    except (httpx.TimeoutException, TimeoutError):
+        return "timeout"
+    except errors.APIError as exc:
+        if exc.code == 400 and "api key" in (exc.message or "").casefold():
+            return "authentication_failed"
+        return {
+            400: "request_rejected",
+            401: "authentication_failed",
+            403: "authentication_failed",
+            404: "model_unavailable",
+            408: "timeout",
+            504: "timeout",
+            429: "rate_limited",
+        }.get(exc.code, "provider_unavailable")
+    except Exception:
         return "provider_unavailable"

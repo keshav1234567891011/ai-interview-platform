@@ -14,7 +14,7 @@ flowchart TD
   Next --> API[FastAPI: validation, ownership, roles, shared quotas]
   API --> DB[(PostgreSQL: SQLAlchemy models)]
   API --> Storage[ResumeStorage adapter: local volume by default]
-  API --> Provider[Optional server-only OpenAI provider]
+  API --> Provider[Optional server-only Gemini free-tier provider]
   API --> Baseline[Curated questions and deterministic evaluation fallback]
   Microphone[Deliberate microphone control] --> Recorder[MediaRecorder and temporary browser playback]
   Recorder --> Transcription[Validated in-memory WAV transcription or browser recognition]

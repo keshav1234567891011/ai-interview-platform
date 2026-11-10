@@ -205,11 +205,11 @@ test("AI choice is explicit and discloses context sharing", async ({
   );
   await page.goto("/interviews/new");
   const choice = page.getByRole("checkbox", {
-    name: "Use AI-assisted questions",
+    name: "Use Gemini AI questions and feedback",
   });
   await expect(choice).toBeEnabled();
   await expect(choice).not.toBeChecked();
-  await expect(page.locator("#ai-privacy")).toContainText("sent to OpenAI");
+  await expect(page.locator("#ai-privacy")).toContainText("Google Gemini");
   await choice.check();
   await page.getByRole("button", { name: "Create interview" }).click();
   await expect(
@@ -222,13 +222,13 @@ test("no key leaves curated practice available", async ({ page }) => {
   await mockWorkspace(page);
   await page.goto("/interviews/new");
   await expect(
-    page.getByRole("checkbox", { name: "Use AI-assisted questions" }),
+    page.getByRole("checkbox", { name: "Use Gemini AI questions and feedback" }),
   ).toBeDisabled();
   await expect(
     page.getByRole("button", { name: "Create interview" }),
   ).toBeEnabled();
   await expect(page.locator("#ai-privacy")).toContainText(
-    "Curated questions are ready",
+    "Gemini AI is not configured",
   );
 });
 
@@ -317,7 +317,7 @@ test("preparing status leads to next fallback question without losing answer", a
   );
   await page.goto(`/interviews/${id}`);
   await expect(
-    page.getByText("AI-assisted question", { exact: true }),
+    page.getByText("Gemini AI question", { exact: true }),
   ).toBeVisible();
   await page
     .getByLabel("Your answer", { exact: true })
@@ -336,5 +336,39 @@ test("preparing status leads to next fallback question without losing answer", a
   await expect(page.locator(".question-origin")).toContainText(
     "Curated question",
   );
+  await expect(page.locator(".question-origin")).toContainText("Deterministic fallback question");
   await expect(page.locator(".question-origin")).toContainText("not a score");
+});
+
+
+test("AI pacing preserves the draft, shows a countdown, and permits a later retry", async ({ page }) => {
+  await mockWorkspace(page);
+  await page.clock.install();
+  let saved = { ...active, questions: [{ ...question }] };
+  let calls = 0;
+  await page.route(`**/api/interviews/${id}`, route => route.fulfill({ json: saved }));
+  await page.route(`**/api/interviews/${id}/questions/q-one/answer`, route => {
+    const body = route.request().postDataJSON();
+    calls++;
+    saved = { ...saved, questions: [{ ...question, answer_text: body.answer_text }] };
+    if (calls === 1) return route.fulfill({ status: 429,
+      headers: { "Retry-After": "2", "X-InterviewAI-AI-Reason": "budget_minute" },
+      json: { detail: "Gemini pacing limit reached. Your answer is saved as a draft." } });
+    return route.fulfill({ json: { ...saved, answered_count: 1, current_sequence: 2,
+      questions: [{ ...saved.questions[0], answered_at: "2026-11-10T10:00:00Z" },
+        { ...question, id: "q-two", sequence: 2, question_text: "Why do indexes add write overhead?" }] } });
+  });
+  await page.goto(`/interviews/${id}`);
+  await page.getByLabel("Your answer", { exact: true }).fill("My draft remains saved while waiting.");
+  await page.getByRole("button", { name: "Save & next", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Retry in 2s" })).toBeDisabled();
+  await expect(page.getByText("Gemini pacing: retry in 2s.", { exact: false })).toBeVisible();
+  await expect(page.getByLabel("Your answer", { exact: true })).toHaveValue("My draft remains saved while waiting.");
+  expect(calls).toBe(1);
+  await page.clock.runFor(2100);
+  await expect(page.getByRole("button", { name: "Save & next", exact: true })).toBeEnabled();
+  expect(calls).toBe(1); // Countdown does not automatically create more provider traffic.
+  await page.getByRole("button", { name: "Save & next", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Why do indexes add write overhead?" })).toBeVisible();
+  expect(calls).toBe(2);
 });

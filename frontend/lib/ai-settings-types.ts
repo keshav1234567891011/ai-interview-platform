@@ -1,4 +1,10 @@
 export type AISettings = {
+  gemini_configured?: boolean;
+  gemini_model?: string;
+  gemini_available?: boolean;
+  gemini_diagnostics?: { operation: string; reason: string; count: number }[];
+  gemini_last_test_status?: string | null;
+  gemini_last_test_at?: string | null;
   enabled: boolean;
   configured: boolean;
   database_key_present: boolean;
